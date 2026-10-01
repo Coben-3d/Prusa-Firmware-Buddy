@@ -137,20 +137,24 @@ add_catch_test(exponential_backoff_tests)
 # MK4 color declaration, streaming API response and real journal reboot.
 add_executable(
   loaded_filament_color_tests
-  loaded_filament_color_tests.cpp
-  ${CMAKE_SOURCE_DIR}/src/common/filament_to_load.cpp
-  ${CMAKE_SOURCE_DIR}/src/common/segmented_json.cpp
-  ${CMAKE_SOURCE_DIR}/src/common/json_encode.cpp
-  ${CMAKE_SOURCE_DIR}/src/persistent_stores/journal/backend.cpp
   ${CMAKE_SOURCE_DIR}/lib/WUI/nhttp/filament_renderer.cpp
+  ${CMAKE_SOURCE_DIR}/src/common/filament_to_load.cpp
+  ${CMAKE_SOURCE_DIR}/src/common/json_encode.cpp
+  ${CMAKE_SOURCE_DIR}/src/common/segmented_json.cpp
+  ${CMAKE_SOURCE_DIR}/src/persistent_stores/journal/backend.cpp
   ../mock/crc32_sw.cpp
+  loaded_filament_color_tests.cpp
   )
 target_include_directories(
-  loaded_filament_color_tests PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/common
-                                     ${CMAKE_SOURCE_DIR}/src/common/utils
-                                     ${CMAKE_SOURCE_DIR}/src/persistent_stores
-                                     ${CMAKE_SOURCE_DIR}/lib/WUI/nhttp
-                                     ${CMAKE_SOURCE_DIR}/tests/stubs
+  loaded_filament_color_tests
+  PRIVATE ${CMAKE_BINARY_DIR}/include
+          ${CMAKE_SOURCE_DIR}/include
+          ${CMAKE_SOURCE_DIR}/src
+          ${CMAKE_SOURCE_DIR}/src/common
+          ${CMAKE_SOURCE_DIR}/src/common/utils
+          ${CMAKE_SOURCE_DIR}/src/persistent_stores
+          ${CMAKE_SOURCE_DIR}/lib/WUI/nhttp
+          ${CMAKE_SOURCE_DIR}/tests/stubs
   )
 target_link_libraries(loaded_filament_color_tests SG14 freertos-mock)
 add_catch_test(loaded_filament_color_tests)

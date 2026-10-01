@@ -139,8 +139,11 @@ so spaces in the SSD path are preserved.
 Executed host cases: RGB/unknown encoding, pending selection/reset, concurrent
 GUI/Marlin reads, journal reload and invalidation, JSON nulls/escaping, snapshot
 ownership, every chunk size from 32 to 256 bytes, and simulated interrupted
-confirmation writes. The initial suite passes 460 assertions in 7 cases. These do not demonstrate
-GUI navigation, HTTP authentication dispatch or complete Marlin integration.
+confirmation writes. The suite passes 460 assertions in 7 cases after formatting. The native CMake
+target also compiles and all seven discovered CTest cases pass. A missing
+generated-options include path in this target was corrected during validation.
+These tests do not demonstrate GUI navigation, HTTP authentication dispatch or
+complete Marlin integration.
 
 Before a machine trial, finish this matrix using a suitable simulator/test
 environment and then the authorized machine:
@@ -160,12 +163,92 @@ environment and then the authorized machine:
 | POST/PUT/DELETE/HEAD, MMU, other models | 405 / 404 as specified | Real HTTP dispatch/build matrix pending |
 | Official firmware return then custom again | Existing printer settings preserved; reload spool declaration | Hardware/rollback pending |
 
-No ARM firmware build or machine test has yet been completed. Downloading the
-official toolchain/dependencies is awaiting separate authorization. The build
-helper's project-local `.dependencies` and `.venv`, build outputs, TMPDIR and
-caches must remain on the external SSD. No new APFS volume is needed for the
-host tests; their paths containing spaces have been exercised. Full upstream
-formatting tools and cross compilation still need verification.
+### Completed MK4 cross compilation on Apple Silicon
+
+On 2026-10-01, the complete Release MK4 build succeeded with the official
+Arm GNU Toolchain 13.3.Rel1, GCC 13.3.1 20240614, and the `empty` bootloader
+preset. The `.bin`, `.bbf`, ELF and map were generated locally. The BBF has an
+all-zero signature; compilation does not grant permission to flash it.
+
+The repository bootstrap selects the Intel macOS toolchain, whose compiler
+requires a missing `/usr/local/opt/zstd/lib/libzstd.1.dylib` on this Mac. The
+[official native Apple Silicon archive](https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-darwin-arm64-arm-none-eabi.tar.xz)
+was installed separately under the external SSD's `PrusaDev/tools`. No global
+library installation or compiler binary modification was needed. A local CMake
+toolchain file points `ARM_TOOLCHAIN_DIR` to the archive root and
+`RECOMMENDED_TOOLCHAIN_BINUTILS` to its `bin` directory, then includes
+`cmake/AnyGccArmNoneEabi.cmake`.
+
+GCC's parallel LTO subprocess makefile does not handle this SSD path's spaces.
+A no-space temporary-directory symlink pointing physically to the SSD fixes
+temporary filenames, and `-flto=1` fixes its unquoted compiler command. LTO
+remains enabled with the original Release optimization settings; only its
+parallelism changes. No new APFS volume or repartition was used.
+
+The successful command, from this repository, was:
+
+```sh
+# This alias contains no build data; its target is the external SSD's tmp directory.
+# Create it once if absent. Do not replace an existing unrelated /tmp entry.
+ln -s '/Volumes/JAUNE - SAVE BEN/PrusaDev/tmp' /tmp/prusadev-mk4-tmp-20261001
+
+env TMPDIR=/tmp/prusadev-mk4-tmp-20261001 \
+  PIP_CACHE_DIR='/Volumes/JAUNE - SAVE BEN/PrusaDev/cache/pip' \
+  PYTHONPYCACHEPREFIX='/Volumes/JAUNE - SAVE BEN/PrusaDev/cache/pycache' \
+  CMAKE_BUILD_PARALLEL_LEVEL=3 \
+  .venv/bin/python utils/build.py \
+    --preset mk4 --build-type release --bootloader empty --skip-bootstrap \
+    --toolchain '/Volumes/JAUNE - SAVE BEN/PrusaDev/tools/mk4-native-toolchain.cmake' \
+    --version-suffix=-color-prototype --version-suffix-short=-color \
+    --build-dir '/Volumes/JAUNE - SAVE BEN/PrusaDev/build/firmware-native' \
+    --products-dir '/Volumes/JAUNE - SAVE BEN/PrusaDev/artifacts/firmware' \
+    '-DCMAKE_EXE_LINKER_FLAGS:STRING=-flto=1'
+```
+
+The environment uses project-local Python 3.12.12, CMake 3.28.3 and Ninja
+1.10.2. Only build/test dependencies were installed; the heavyweight EasyOCR
+stack and unrelated printer bootloaders were omitted. Formatting was applied
+with the repository's pinned clang-format 16, cmake-format 0.6.13 and yapf
+0.40.2. The formatter itself uses a locally built Intel zstd library through
+DYLD_LIBRARY_PATH; nothing was installed in Homebrew or system directories.
+
+Final linker report for the formatted source:
+
+| Region | Used | Available | Usage |
+| --- | --- | --- | --- |
+| FLASH | 1,881,492 B | 1,919 KiB | 95.75% |
+| RAM | 114,656 B | 196,508 B | 58.35% |
+| CCMRAM | 61,276 B | 64 KiB | 93.50% |
+
+This is an absolute link-time footprint, not a measured difference against a
+fresh official build. Runtime stack headroom and GUI timing remain unmeasured.
+The committed validation build reports `6.5.7-color+3`; generated product
+filenames use `mk4_release_emptyboot_6.5.7-color-prototype`. This development
+build number comes from the shallow local Git history, not Prusa's official
+release build counter, and increases with subsequent commits.
+
+### Remaining execution limits
+
+The native CMake test build required a local host-only CMake hook replacing
+the upstream GNU linker option `--gc-sections` with Apple ld's `-dead_strip`.
+This hook is outside the repository and is not used for firmware compilation.
+The larger upstream `nhttp_tests` target remains blocked by Apple Clang rejecting
+existing `constexpr strlen(...)` expressions in `src/common/e2ee/e2ee.hpp`.
+That unrelated code was not changed. The color renderer has been exercised
+through production sources, but the new URL has not been dispatched over a
+running HTTP server.
+
+The upstream Mini404 v0.9.10 macOS simulator was downloaded locally but cannot
+start: its Intel binary requires absent Homebrew dylibs, beginning with
+`/usr/local/opt/dtc/lib/libfdt.1.dylib`. It also references glib, pixman, libpng,
+GnuTLS and other libraries. No global dependencies were installed to force it
+to run. GUI navigation and complete Marlin load/change integration therefore
+remain pending, as do every hardware and rollback test in the matrix above.
+
+All dependencies, caches, temporary build data and products remain under
+`PrusaDev` on the external SSD. The small `/tmp` alias is a symlink only. There
+was no printer connection, credential creation, flash, physical seal change,
+upstream PR or contact with Prusa.
 
 ## Machine boundary and rollback
 

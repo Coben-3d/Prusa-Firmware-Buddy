@@ -54,7 +54,8 @@ public:
                 REQUIRE(bytes.size() == sizeof(value_));
                 memcpy(&value_, bytes.data(), sizeof(value_));
             }
-        }, {});
+        },
+            {});
     }
     void set(uint64_t value) {
         value_ = value;

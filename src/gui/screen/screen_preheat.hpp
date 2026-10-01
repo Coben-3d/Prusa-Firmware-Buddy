@@ -48,9 +48,10 @@ private:
 
 class WindowMenuPreheat : public WindowMenuVirtual<WindowMenuCallbackItem, MI_FILAMENT
 #if PRINTER_IS_PRUSA_MK4()
-    , MI_FILAMENT_COLOR
+                              ,
+                              MI_FILAMENT_COLOR
 #endif
-    > {
+                              > {
 
 public:
     WindowMenuPreheat(window_t *parent, const Rect16 &rect);
@@ -86,12 +87,12 @@ private:
     static constexpr auto items = std::to_array<DynamicIndexMappingRecord<Item>>({
         { Item::return_, DynamicIndexMappingType::optional_item },
 #if PRINTER_IS_PRUSA_MK4()
-        { Item::color, DynamicIndexMappingType::optional_item },
+            { Item::color, DynamicIndexMappingType::optional_item },
 #endif
-        { Item::filament_section, DynamicIndexMappingType::dynamic_section },
-        { Item::adhoc_filament },
-        { Item::show_all, DynamicIndexMappingType::optional_item },
-        { Item::cooldown, DynamicIndexMappingType::optional_item },
+            { Item::filament_section, DynamicIndexMappingType::dynamic_section },
+            { Item::adhoc_filament },
+            { Item::show_all, DynamicIndexMappingType::optional_item },
+            { Item::cooldown, DynamicIndexMappingType::optional_item },
     });
 
 private:
