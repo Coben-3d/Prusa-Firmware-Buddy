@@ -7,7 +7,8 @@ import struct
 from .actions import encoder, screen, temperature, network, utils
 from simulator import MachineType, Thermistor, Printer
 
-PRUSALINK_PASSWORD = '0123456789123456'
+# The firmware's 16-byte password array must include its terminating NUL.
+PRUSALINK_PASSWORD = '012345678912345'
 PRUSALINK_EEPROM = {
     'PrusaLink Password':
     struct.pack('<16s', bytearray(PRUSALINK_PASSWORD.encode('utf-8')))

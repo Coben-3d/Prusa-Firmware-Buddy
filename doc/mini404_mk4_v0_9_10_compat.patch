@@ -1,0 +1,207 @@
+--- a/hw/arm/prusa/parts/spi_display.c
++++ b/hw/arm/prusa/parts/spi_display.c
+@@ -152,18 +152,30 @@
+ // OBJECT_DECLARE_SIMPLE_TYPE(SPIDisplayState, ILI9488)
+ OBJECT_DECLARE_TYPE(SPIDisplayState, SPIDisplayClass, SPI_DISPLAY)
+ 
++typedef union {
++    uint32_t full;
++    struct {
++        uint8_t b;
++        uint8_t g;
++        uint8_t r;
++        uint8_t a;
++    };
++} QEMU_PACKED pixel_color_t;
++
++// Write a pixel to the framebuffer and advance the cursor.
++static inline void spi_display_write_pixel(SPIDisplayState *s, pixel_color_t *color)
++{
++    color->a = 0xFF;
++    s->framebuffer[s->col + s->row * s->dpy_info->cols] = color->full;
++    s->col++;
++    if (s->col > s->col_end) { s->row++; s->col = s->col_start; }
++    if (s->row > s->row_end) { s->row = s->row_start; }
++}
++
+ static uint32_t spi_display_transfer(SSIPeripheral *dev, uint32_t data)
+ {
+     SPIDisplayState *s = SPI_DISPLAY(dev);
+-    union color{
+-        uint32_t full;
+-        struct{
+-            uint8_t b;
+-            uint8_t g;
+-            uint8_t r;
+-            uint8_t a;
+-        };
+-    }  QEMU_PACKED color;
++    pixel_color_t color;
+     color.full = 0;
+     uint16_t word = 0;
+ 	// If this is a read, pipe out the data appropriately.
+@@ -228,6 +240,9 @@
+             uint32_t value = s->cmd_data[0];
+             switch (value&0x07)
+             {
++                case 0x1: // 3-bit/pixel tribit (1 bit per R,G,B), 2 pixels per byte
++                    s->bpp_mode = 3;
++                    break;
+                 case 0x5: // 5-6-5, 16bpp
+                     s->bpp_mode = 16;
+                     break;
+@@ -245,36 +260,44 @@
+                 s->row = s->row_start;
+                 s->col = s->col_start;
+                 // printf("RAWR: %d %d\n", sr->row, s->col);
+-                DATA(s->bpp_mode == 16 ? 2 : 3);
++                DATA(s->bpp_mode == 16 ? 2 : (s->bpp_mode == 3 ? 1 : 3));
+             } else {// One of an unknown number of 16-bit words.
+                 switch (s->bpp_mode) {
++                    case 3: // Tribit: 2 pixels per byte, bits [5:3] and [2:0]
++                    {
++                        DATA(1);
++                        uint8_t byte = s->cmd_data[0];
++                        // Pixel 1: bits [5:3] -> R=bit5, G=bit4, B=bit3
++                        uint8_t hi = (byte >> 3) & 0x07;
++                        color.r = (hi & 0x4) ? 0xFC : 0x00;
++                        color.g = (hi & 0x2) ? 0xFC : 0x00;
++                        color.b = (hi & 0x1) ? 0xFC : 0x00;
++                        spi_display_write_pixel(s, &color);
++                        // Pixel 2: bits [2:0] -> R=bit2, G=bit1, B=bit0
++                        uint8_t lo = byte & 0x07;
++                        color.r = (lo & 0x4) ? 0xFC : 0x00;
++                        color.g = (lo & 0x2) ? 0xFC : 0x00;
++                        color.b = (lo & 0x1) ? 0xFC : 0x00;
++                        spi_display_write_pixel(s, &color);
++                        break;
++                    }
+                     case 16:
+                         DATA(2);
+                         word = (s->cmd_data[0]<<8|s->cmd_data[1]);
+                         color.r = (word & 0xF800)>>8;
+                         color.g = (word & 0x7E0)>> 3;
+                         color.b = (word & 0x1F) << 3;
++                        spi_display_write_pixel(s, &color);
+                         break;
+                     case 18:
+                         DATA(3);
+                         color.b = s->cmd_data[0];
+                         color.g = s->cmd_data[1];
+                         color.r = s->cmd_data[2];
++                        spi_display_write_pixel(s, &color);
+                         break;
+                     default:
+                         printf("FIXME: unhandled bpp mode in RAMWR: %u\n", s->bpp_mode);
+-                }
+-                color.a = 0xFF;
+-                s->framebuffer[(s->col) + (s->row*s->dpy_info->cols)] = color.full;
+-                s->col++;
+-                if (s->col>s->col_end)
+-                {
+-                    s->row++;
+-                    s->col = s->col_start;
+-                }
+-                if (s->row>s->row_end)
+-                {
+-                    s->row = s->row_start;
+                 }
+                 s->cmd_len=0; // "remove" the data from the queue. We'll get more,
+                 s->redraw = 1;
+--- a/hw/arm/prusa/prusa-mk4.c
++++ b/hw/arm/prusa/prusa-mk4.c
+@@ -319,7 +319,7 @@
+ 	const xBuddyMachineClass *mc = XBUDDY_MACHINE_GET_CLASS(OBJECT(machine));
+ 	const mk4_cfg_t cfg = *mc->cfg;
+ 
+-	OTP_v4 otp_data = { .version = 4, .size = sizeof(OTP_v4),
++	OTP_v4 otp_data = { .version = 4, .size = sizeof(OTP_v4), .bomID = 38,
+ 		.datamatrix = {'4', '5', '5', '8', '-', '2', '7', '0', '0', '0', '0', '1', '9', '0', '0', '5', '2', '5', '9', '9', '9', '9', 0, 0}
+ 	};
+ 	if (cfg.dm_ver == 34)
+@@ -667,8 +667,10 @@
+ 
+ 	}
+ 
++    DeviceState *loveboard_dev = NULL;
+     if (cfg.has_at21) {
+         dev = qdev_new("at21csxx");
++        loveboard_dev = dev;
+ 		qdev_prop_set_drive(dev, "drive", blk_by_name("loveboard-eeprom"));
+         sysbus_realize(SYS_BUS_DEVICE(dev), &error_fatal);
+         // 2-way bitbang
+@@ -745,7 +747,8 @@
+     // print fan = fan0
+     uint16_t fan_max_rpms[] = { 6600, 8000 };
+     uint8_t  fan_pwm_pins[] = { 11, 9};
+-    uint8_t fan_tach_pins[] = { 10, 14};
++    uint8_t fan_tach_pins[] = { 10, cfg.has_at21 ? 10 : 14};
++    DeviceState *fans[2];
+     uint8_t fan_labels[] = {'P','E'};
+ 	DeviceState* fanpwm = qdev_new("software-pwm");
+ 	sysbus_realize_and_unref(SYS_BUS_DEVICE(fanpwm),&error_fatal);
+@@ -756,6 +759,7 @@
+ 			qdev_get_gpio_in_named(fanpwm, "gpio-in",i)
+ 		);
+         dev = qdev_new("fan");
++        fans[i] = dev;
+         qdev_prop_set_uint8(dev,"label",fan_labels[i]);
+         qdev_prop_set_uint32(dev, "max_rpm",fan_max_rpms[i]);
+         qdev_prop_set_bit(dev, "is_nonlinear", i); // E is nonlinear.
+@@ -770,6 +774,14 @@
+ // #else
+ //         qdev_connect_gpio_out_named(dev, "pwm-out", 0, qdev_get_gpio_in_named(db2,"fan-pwm",i));
+ // #endif
++    }
++
++    if (cfg.has_at21) {
++        // Official current MK4 wiring: F13 selects print (H) / heatbreak (L).
++        qemu_irq print_select = qemu_irq_invert(qdev_get_gpio_in_named(fans[0], "tach-disable", 0));
++        qemu_irq fan_select = qemu_irq_split(qdev_get_gpio_in_named(fans[1], "tach-disable", 0), print_select);
++        qemu_irq select = qemu_irq_split(fan_select, qdev_get_gpio_in(loveboard_dev, 0));
++        qdev_connect_gpio_out(stm32_soc_get_periph(dev_soc, STM32_P_GPIOF), 13, select);
+     }
+ 
+     DeviceState* encoder = qdev_new("encoder-input");
+--- a/hw/arm/prusa/parts/fan.c
++++ b/hw/arm/prusa/parts/fan.c
+@@ -39,6 +39,7 @@
+ 	bool is_nonlinear;
+ 
+     bool is_stalled;
++    bool tach_blocked;
+ 
+ 	uint8_t pwm;
+ 	uint32_t max_rpm;
+@@ -75,12 +76,19 @@
+ static void fan_tach_expire(void *opaque)
+ {
+     fan_state *s = opaque;
+-    if (s->is_stalled) {
+-        qemu_set_irq(s->tach_pulse, 0);
+-    } else {
+-        qemu_set_irq(s->tach_pulse, s->pulse_state^=1);
++    if (!s->tach_blocked) {
++        if (s->is_stalled) {
++            qemu_set_irq(s->tach_pulse, 0);
++        } else {
++            qemu_set_irq(s->tach_pulse, s->pulse_state^=1);
++        }
+     }
+     timer_mod(s->tach, qemu_clock_get_us(QEMU_CLOCK_VIRTUAL)+s->usec_per_pulse);
++}
++
++static void fan_tach_block(void *opaque, int n, int level) {
++    fan_state *s = opaque;
++    s->tach_blocked = level;
+ }
+ 
+ static void fan_pwm_change(void *opaque, int n, int level) {
+@@ -188,6 +196,7 @@
+     qdev_init_gpio_out_named(DEVICE(obj), &s->tach_pulse, "tach-out",1);
+     qdev_init_gpio_out_named(DEVICE(obj), &s->pwm_out, "pwm-out",1);
+     qdev_init_gpio_out_named(DEVICE(obj), &s->rpm_out, "rpm-out",1);
++    qdev_init_gpio_in_named(DEVICE(obj), fan_tach_block, "tach-disable",1);
+     qdev_init_gpio_in_named(DEVICE(obj), fan_pwm_change, "pwm-in",1);
+     qdev_init_gpio_in_named(DEVICE(obj), fan_pwm_change_soft, "pwm-in-soft",1);
+ 

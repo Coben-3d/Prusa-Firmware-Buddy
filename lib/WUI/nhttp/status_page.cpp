@@ -27,7 +27,8 @@ namespace nhttp::handler {
 StatusPage::StatusPage(http::Status status, const RequestParser &parser, const char *extra_content)
     : extra_content(extra_content)
     , status(status)
-    , json_content(parser.accepts_json) {
+    , json_content(parser.accepts_json)
+    , head_only(parser.method == http::Method::Head) {
     auto default_close_handling = parser.can_keep_alive() ? CloseHandling::KeepAlive : CloseHandling::Close;
     close_handling = has_body(parser.method) and status >= 300 ? CloseHandling::ErrorClose : default_close_handling;
 }
@@ -76,7 +77,7 @@ void StatusPage::step_impl(std::string_view, bool, uint8_t *output, size_t outpu
      */
     size_t used_up = write_headers(output, output_size, status, ct, handling, strlen(content_buffer), etag, extra_hdrs);
     size_t rest = output_size - used_up;
-    size_t write = std::min(strlen(content_buffer), rest);
+    size_t write = head_only ? 0 : std::min(strlen(content_buffer), rest);
     // Copy without the \0, we don't need it.
     memcpy(output + used_up, content_buffer, write);
 

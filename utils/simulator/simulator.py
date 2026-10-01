@@ -28,6 +28,8 @@ class Simulator:
         self.scriptio_reader = scriptio_reader
         self.scriptio_writer = scriptio_writer
         self.http_proxy_port = http_proxy_port
+        self._script_finished = asyncio.Event()
+        self._command_lock = asyncio.Lock()
 
     @staticmethod
     def _get_available_port():
@@ -43,6 +45,7 @@ class Simulator:
                   firmware_path: Path,
                   tmpdir: Path,
                   scriptio_port: Optional[int] = None,
+                  scriptio_greeting: bool = True,
                   http_proxy_port: Optional[int] = None,
                   mount_dir_as_flash: Optional[Path] = None,
                   eeprom_content: Optional[Tuple[Path, Path]] = None,
@@ -71,7 +74,7 @@ class Simulator:
         if http_proxy_port:
             params += [
                 '-netdev',
-                f'user,id=mini-eth,hostfwd=tcp::{http_proxy_port}-:80'
+                f'user,id=mini-eth,hostfwd=tcp:127.0.0.1:{http_proxy_port}-:80'
             ]
         if mount_dir_as_flash:
             params += [
@@ -122,8 +125,10 @@ class Simulator:
                     raise RuntimeError('simulator exited unexpectedly')
                 try:
                     scriptio_reader, scriptio_writer = await stack.enter_async_context(
-                        Simulator.connect_to_scriptio('localhost',
-                                                      scriptio_port))
+                        Simulator.connect_to_scriptio(
+                            'localhost',
+                            scriptio_port,
+                            consume_first_line=scriptio_greeting))
                     break
                 except OSError:
                     logger.info('waiting for scriptio console to start')
@@ -139,20 +144,23 @@ class Simulator:
 
             stderr_task = asyncio.ensure_future(parse_simulator_stderr())
 
-            # yield the simulator to the callee
+            # Continuously drain stdout so verbose devices cannot block QEMU
+            # while tests wait for HTTP or time rather than script commands.
+            simulator = Simulator(process=process,
+                                  machine=machine,
+                                  tmpdir=tmpdir,
+                                  scriptio_reader=scriptio_reader,
+                                  scriptio_writer=scriptio_writer,
+                                  http_proxy_port=http_proxy_port)
+            stdout_task = asyncio.ensure_future(
+                simulator.parse_simulator_stdout())
             try:
-                yield Simulator(process=process,
-                                machine=machine,
-                                tmpdir=tmpdir,
-                                scriptio_reader=scriptio_reader,
-                                scriptio_writer=scriptio_writer,
-                                http_proxy_port=http_proxy_port)
+                yield simulator
             finally:
                 if process.returncode is None:
                     process.terminate()
-                stderr_task.cancel()
-                if process.returncode is None:
-                    await process.communicate()
+                await process.wait()
+                await asyncio.gather(stdout_task, stderr_task)
 
     @staticmethod
     @asynccontextmanager
@@ -192,28 +200,23 @@ class Simulator:
             if 'Bus unhandled low duration' in line:
                 continue
             logger.info('%s', line)
-            yield line
+            if line.removeprefix('# ') == 'ScriptHost: Script FINISHED':
+                self._script_finished.set()
 
     async def command(self, command: str, readline=False, timeout=3.0):
         assert self.simulator_is_running(), 'simulator is not running'
         assert self.scriptio_reader is not None and self.scriptio_writer is not None
 
-        async def issue_command():
-            assert self.scriptio_writer, 'scriptio socket isn\'t connected'
+        async with self._command_lock:
+            self._script_finished.clear()
             self.scriptio_writer.write(command.encode('utf-8') + b'\n')
+            await self.scriptio_writer.drain()
+            await asyncio.wait_for(self._script_finished.wait(),
+                                   timeout=timeout)
 
-        async def wait_for_script_finished_line():
-            async for line in self.parse_simulator_stdout():
-                if line.strip() == 'ScriptHost: Script FINISHED':
-                    break
-
-        await asyncio.gather(
-            issue_command(),
-            asyncio.wait_for(wait_for_script_finished_line(), timeout=timeout))
-
-        if readline:
-            line = await self.scriptio_reader.readline()
-            return line.decode('utf-8').strip()
+            if readline:
+                line = await self.scriptio_reader.readline()
+                return line.decode('utf-8').strip()
 
     #
     # encoder primitives

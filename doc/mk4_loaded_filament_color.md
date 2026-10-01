@@ -48,7 +48,8 @@ and retains it for every JSON chunk.
 
 Preheat and palette selection do not write this item. Starting a full load,
 autoload, M600 change or stuck-filament replacement invalidates the old
-declaration, even when the new material is identical. Only a successful end of
+declaration before the FSM holder starts parking, even when the new material
+is identical. Only a successful end of
 the Pause load loop commits the pending color. Stop, failed load, or interruption
 therefore leave the color unknown. A purge-only operation and load-to-gears do
 not replace a confirmed color. Unload, sensor-confirmed removal, and a different
@@ -142,26 +143,75 @@ ownership, every chunk size from 32 to 256 bytes, and simulated interrupted
 confirmation writes. The suite passes 460 assertions in 7 cases after formatting. The native CMake
 target also compiles and all seven discovered CTest cases pass. A missing
 generated-options include path in this target was corrected during validation.
-These tests do not demonstrate GUI navigation, HTTP authentication dispatch or
-complete Marlin integration.
+These host tests do not demonstrate GUI navigation or complete Marlin
+integration. Running-firmware tests now cover authentication and method dispatch,
+black/white/unknown declarations through process restarts, and LCD navigation.
+The palette/back/cancel case starts with a confirmed blue PLA record, chooses
+Red provisionally, returns from the palette and cancels preheat. The API must
+still report the original blue declaration. Captures are retained locally.
 
 Before a machine trial, finish this matrix using a suitable simulator/test
 environment and then the authorized machine:
 
 | Case | Expected result | Current status |
 | --- | --- | --- |
-| Normal load with each palette color | Color survives success and reboot | Host encoding/journal passed; GUI/Marlin pending |
-| Back from palette | Pending choice unchanged | Existing dialog behavior; GUI pending |
-| Back from preheat | Prior confirmed color untouched | Journal separation passed; integration pending |
-| Stop during load / runout / purge retry | No premature confirmed color | Integration pending |
+| Normal load with each palette color | Color survives success and reboot | Host encoding/journal and Red palette passed; full success pending |
+| Back from palette | Pending choice unchanged | Passed in Mini404 with an existing blue PLA record |
+| Back from preheat | Prior confirmed color untouched | Passed in Mini404; original blue record preserved |
+| Early load interruption / runout / purge retry | No premature confirmed color | Interruption during Parking and reboot passed; other phases pending |
 | Purge-only of an existing spool | Confirmed color preserved | Integration pending |
 | Successful unload / sensor removal | Color unknown, including after reboot | Journal invalidation passed; integration pending |
-| Same-material spool replacement | Old color cleared before load, new one committed only on success | Integration pending |
+| Same-material spool replacement | Old color cleared before motion, new one committed only on success | Start of PLA-to-PLA replacement and interrupted reboot passed; success pending |
 | Autoload and Custom material confirm | Palette choice retained after material response | Integration pending |
 | M600 with/without C | Provided RGB / unknown on successful completion | Integration pending |
-| GET with existing auth, invalid/no auth | 200 / existing authentication rejection | Real HTTP dispatch pending |
-| POST/PUT/DELETE/HEAD, MMU, other models | 405 / 404 as specified | Real HTTP dispatch/build matrix pending |
+| GET with existing auth, invalid/no auth | 200 / existing authentication rejection | Passed against running MK4 firmware in Mini404 |
+| POST/PUT/DELETE/HEAD, MMU, other models | 405 / 404 as specified | 405 passed in Mini404; MMU/other model builds pending |
 | Official firmware return then custom again | Existing printer settings preserved; reload spool declaration | Hardware/rollback pending |
+
+### Running-firmware integration checks
+
+`tests/integration/test_loaded_filament_color.py` contains six verified cases:
+HTTP auth/methods, black/white/unknown declarations with restarts, palette/back/
+cancel preserving an existing color, and same-material load interruption. The
+interruption case found that the old invalidation followed the FSM holder
+constructor, which parks the nozzle. Invalidation now happens before that
+constructor, and the running API confirms an unknown color already at Parking
+and after restarting with the same EEPROM image.
+
+The seventh case, completed GUI load through the final Yes confirmation and
+reboot, requires `--complete-filament-load`. It is skipped by default and is
+**not validated**. With Mini404 v0.9.10 it times out during Parking, including
+with a longer 180-second allowance and another virtual-clock setting. The
+current official Mini404 revision
+[`3b8be69`](https://github.com/vintagepc/MINI404/tree/3b8be69b2c02c641b778b3754b78291186f3f71a)
+was also compiled (QEMU 11) but did not complete the boot fixture. Its different
+console/EEPROM conventions and host build-script issues prevent claiming full
+load coverage. No fan check, heater protection or motion safety was disabled
+to force this case through. The standard upstream fixture disables filament
+sensors; sensor-enabled autoload/runout tests therefore remain separate work.
+
+For the verified simulator, apply
+[`mini404_mk4_v0_9_10_compat.patch`](mini404_mk4_v0_9_10_compat.patch) to official
+Mini404 v0.9.10 sources before its native build. The local runner provides the
+SSD library search paths. Tests use a dedicated Python 3.12 environment with
+EasyOCR 1.7.2, pytest 7.3.2 and pytest-asyncio 0.21.2; models and caches stay on
+that SSD. Run with the separately built **noboot** firmware:
+
+```sh
+BUDDY_NO_VIRTUALENV=1 BUDDY_TEST_OCR_DEVICE=cpu \
+EASYOCR_MODULE_PATH='/Volumes/JAUNE - SAVE BEN/PrusaDev/cache/easyocr' \
+TORCH_HOME='/Volumes/JAUNE - SAVE BEN/PrusaDev/cache/torch' \
+PYTHONPYCACHEPREFIX='/Volumes/JAUNE - SAVE BEN/PrusaDev/cache/pycache' \
+'/Volumes/JAUNE - SAVE BEN/PrusaDev/tools/simulator-test-venv/bin/python' \
+  -m pytest tests/integration/test_loaded_filament_color.py \
+  --firmware '/Volumes/JAUNE - SAVE BEN/PrusaDev/build/firmware-sim/mk4_release_noboot/firmware.bin' \
+  --simulator '/Volumes/JAUNE - SAVE BEN/PrusaDev/tools/run-mini404-native.sh'
+```
+
+The simulator's HTTP port binds only to 127.0.0.1. The newer console can be
+selected with `--simulator-no-greeting`; this option does not imply that a
+particular newer machine model passed the suite. All password values used here
+are deterministic simulated fixtures, not credentials created for a printer.
 
 ### Completed MK4 cross compilation on Apple Silicon
 
@@ -206,13 +256,13 @@ env TMPDIR=/tmp/prusadev-mk4-tmp-20261001 \
 ```
 
 The environment uses project-local Python 3.12.12, CMake 3.28.3 and Ninja
-1.10.2. Only build/test dependencies were installed; the heavyweight EasyOCR
-stack and unrelated printer bootloaders were omitted. Formatting was applied
+1.10.2. Firmware build dependencies remain in the project environment. The EasyOCR
+stack is isolated in a separate simulator-test environment on the external SSD. Formatting was applied
 with the repository's pinned clang-format 16, cmake-format 0.6.13 and yapf
 0.40.2. The formatter itself uses a locally built Intel zstd library through
 DYLD_LIBRARY_PATH; nothing was installed in Homebrew or system directories.
 
-Final linker report for the formatted source:
+Previous linker report for commit `623b17b`, before the integration fixes:
 
 | Region | Used | Available | Usage |
 | --- | --- | --- | --- |
@@ -222,10 +272,13 @@ Final linker report for the formatted source:
 
 This is an absolute link-time footprint, not a measured difference against a
 fresh official build. Runtime stack headroom and GUI timing remain unmeasured.
-The committed validation build reports `6.5.7-color+3`; generated product
+That earlier validation build reports `6.5.7-color+3`; generated product
 filenames use `mk4_release_emptyboot_6.5.7-color-prototype`. This development
 build number comes from the shallow local Git history, not Prusa's official
-release build counter, and increases with subsequent commits.
+release build counter, and increases with subsequent commits. The external
+`artifacts/mk4-color-validation.json` records the final commit, product hashes
+and current linker footprint without requiring another documentation-only
+rebuild cycle.
 
 ### Remaining execution limits
 
@@ -235,18 +288,31 @@ This hook is outside the repository and is not used for firmware compilation.
 The larger upstream `nhttp_tests` target remains blocked by Apple Clang rejecting
 existing `constexpr strlen(...)` expressions in `src/common/e2ee/e2ee.hpp`.
 That unrelated code was not changed. The color renderer has been exercised
-through production sources, but the new URL has not been dispatched over a
-running HTTP server.
+through production sources, and the new URL has also been dispatched over
+a running firmware HTTP server in Mini404.
 
-The upstream Mini404 v0.9.10 macOS simulator was downloaded locally but cannot
-start: its Intel binary requires absent Homebrew dylibs, beginning with
-`/usr/local/opt/dtc/lib/libfdt.1.dylib`. It also references glib, pixman, libpng,
-GnuTLS and other libraries. No global dependencies were installed to force it
-to run. GUI navigation and complete Marlin load/change integration therefore
-remain pending, as do every hardware and rollback test in the matrix above.
+Mini404 v0.9.10 was rebuilt natively for Apple Silicon with external-SSD
+GLib, pixman, libpng, libslirp and libfdt libraries. The downloaded Intel binary
+was not made runnable through global Homebrew installs. Local compatibility
+work used the official LCD 3-bit-color fix
+[`2d476c4`](https://github.com/vintagepc/MINI404/commit/2d476c4f50847183bda68b834ac5747d9b4a4ac6),
+BOM ID 38 and the current MK4 tachometer multiplexing design. This is simulator
+board data and wiring, not a change to the printer's firmware protections.
+The old simulator still stalls at Parking in the full-load test. The current
+revision also has unvalidated fixture compatibility, as recorded above.
+
+The running HTTP test found that the existing shared StatusPage/get_only path
+sent a body for HEAD. It now suppresses the body while retaining the ordinary
+response length header. Authenticated HEAD returns 405; unauthenticated HEAD
+returns 401 without a body. Non-HEAD method rejection keeps its existing forced
+connection-close behavior. Test fixtures now include a NUL in the simulated
+PrusaLink password and merge EEPROM data without mutating global defaults.
+The test runner drains QEMU stdout continuously so device trace output cannot
+block execution between script commands. OCR can be explicitly run on CPU via
+BUDDY_TEST_OCR_DEVICE=cpu. HTTP readiness is awaited separately from GUI boot.
 
 All dependencies, caches, temporary build data and products remain under
-`PrusaDev` on the external SSD. The small `/tmp` alias is a symlink only. There
+`PrusaDev` on the external SSD. The `/tmp` aliases are symlinks only. There
 was no printer connection, credential creation, flash, physical seal change,
 upstream PR or contact with Prusa.
 

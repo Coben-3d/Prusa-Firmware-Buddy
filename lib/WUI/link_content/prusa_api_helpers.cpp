@@ -146,6 +146,9 @@ StatusPage print_file(char *filename, const RequestParser &parser) {
 void get_only(handler::ConnectionState state, const handler::RequestParser &parser, handler::Step &out) {
     if (parser.method == http::Method::Get) {
         out.next = move(state);
+    } else if (parser.method == http::Method::Head) {
+        // HEAD errors advertise the normal response length without a body.
+        out.next = StatusPage(Status::MethodNotAllowed, parser);
     } else {
         // Drop the connection in fear there might be a body we don't know about.
         out.next = StatusPage(Status::MethodNotAllowed, StatusPage::CloseHandling::ErrorClose, parser.accepts_json);

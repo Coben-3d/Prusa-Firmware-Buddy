@@ -1218,20 +1218,21 @@ bool Pause::invoke_loop() {
     thermalManager.setExtrusionScalingEnabled(false);
 #endif // ENABLED(PID_EXTRUSION_SCALING)
 
-    FSM_HolderLoadUnload holder(*this);
-
-    // Prevent the "waiting for temperature restore" from triggering - the Pause manages temperature safety for extrusion internally
-    buddy::SafetyTimerNonBlockingGuard non_blocking_guard;
-
 #if PRINTER_IS_PRUSA_MK4()
     const bool declares_color = !FSensors_instance().HasMMU() && settings.GetExtruder() == 0
         && (load_type == LoadType::load || load_type == LoadType::autoload || load_type == LoadType::filament_change || load_type == LoadType::filament_stuck);
     if (declares_color) {
         // The spool may change even if its material stays the same. Until the
         // entire load succeeds, conservatively report no confirmed color.
+        // Clear before the FSM holder performs any parking motion.
         config_store().loaded_filament_color.set(0);
     }
 #endif
+
+    FSM_HolderLoadUnload holder(*this);
+
+    // Prevent the "waiting for temperature restore" from triggering - the Pause manages temperature safety for extrusion internally
+    buddy::SafetyTimerNonBlockingGuard non_blocking_guard;
 
     set(LoadState::start);
 

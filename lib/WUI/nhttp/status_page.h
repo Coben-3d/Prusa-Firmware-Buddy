@@ -33,6 +33,7 @@ protected:
     http::Status status;
     CloseHandling close_handling;
     bool json_content;
+    bool head_only = false;
     std::optional<uint32_t> etag = std::nullopt;
 
     // Note: This exists only so we can reuse the exact same code also for UnauthenticatedStatusPage, the only diffrerence

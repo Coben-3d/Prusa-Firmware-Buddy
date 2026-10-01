@@ -54,6 +54,16 @@ def pytest_addoption(parser):
         action='store_true',
         help='Pass -s to QEMU to enable gdbserver',
     )
+    parser.addoption(
+        '--simulator-no-greeting',
+        action='store_true',
+        help='Use the newer Mini404 script console without an initial greeting',
+    )
+    parser.addoption(
+        '--complete-filament-load',
+        action='store_true',
+        help='Run the full load case requiring compatible motion/thermal emulation',
+    )
     # yapf: enable
 
 
@@ -108,8 +118,7 @@ def specific_eeprom_variables():
 
 @pytest.fixture
 def eeprom_variables(specific_eeprom_variables):
-    DEFAULT_EEPROM_CONTENT.update(specific_eeprom_variables)
-    return DEFAULT_EEPROM_CONTENT
+    return {**DEFAULT_EEPROM_CONTENT, **specific_eeprom_variables}
 
 
 def get_hash(*items):
@@ -248,6 +257,8 @@ def basic_printer_arguments(simulator_path, firmware_path,
                 machine=MachineType.MK4,
                 firmware_path=firmware_path,
                 scriptio_port=simulator_scriptio_port,
+                scriptio_greeting=not pytestconfig.getoption(
+                    '--simulator-no-greeting'),
                 http_proxy_port=simulator_proxy_port,
                 tmpdir=Path(tmpdir.mkdir('simulator')),
                 nographic=not enable_graphic)

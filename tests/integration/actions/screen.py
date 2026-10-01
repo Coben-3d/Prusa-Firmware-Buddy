@@ -2,6 +2,7 @@ import asyncio
 import logging
 import functools
 import io
+import os
 
 from easyocr import Reader
 from PIL import Image
@@ -9,7 +10,9 @@ from PIL import Image
 from simulator import Printer, MachineType
 
 logger = logging.getLogger(__name__)
-ocr_reader = Reader(['en'], verbose=False)
+ocr_reader = Reader(['en'],
+                    gpu=os.environ.get('BUDDY_TEST_OCR_DEVICE') != 'cpu',
+                    verbose=False)
 
 
 async def take_screenshot(printer: Printer) -> Image.Image:
