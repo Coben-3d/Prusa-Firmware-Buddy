@@ -32,6 +32,7 @@ target_sources(
             nhttp/static_mem.cpp
             nhttp/status_page.cpp
             nhttp/status_renderer.cpp
+            nhttp/filament_renderer.cpp
             nhttp/transfer_renderer.cpp
             pbuf_rx.cpp
             sntp/sntp.c

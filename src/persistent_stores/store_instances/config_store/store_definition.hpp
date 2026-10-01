@@ -20,6 +20,7 @@
 #include <footer_eeprom.hpp>
 #include <time_tools.hpp>
 #include <encoded_filament.hpp>
+#include <printers.h>
 #include <selftest_result.hpp>
 #include <module/prusa/dock_position.hpp>
 #include <module/prusa/tool_offset.hpp>
@@ -388,6 +389,12 @@ struct CurrentStore
     /// that was loaded previously and that there is currenly no loaded
     /// filament (true).
     StoreItem<std::bitset<8>, 0, ItemFlag::printer_state, journal::hash("Loaded filament is previous")> loaded_filament_is_previous;
+
+#if PRINTER_IS_PRUSA_MK4()
+    /// Confirmed mono-spool declaration: material tag and optional RGB in one item.
+    /// Encoded by loaded_filament_color.hpp; zero is unknown/unconfirmed.
+    StoreItem<uint64_t, 0, ItemFlag::printer_state, journal::hash("MK4 Loaded Filament Color v1")> loaded_filament_color;
+#endif
 
     /// User-defined filament ordering. Does not need to contain all the filaments - the rest will be appended to the back using the standard rules
     StoreItem<std::array<FilamentType, max_total_filament_count>, FilamentType::none, ItemFlag::user_presets, journal::hash("Filament Order")> filament_order;

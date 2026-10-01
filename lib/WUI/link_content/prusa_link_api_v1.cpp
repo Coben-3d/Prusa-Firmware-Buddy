@@ -11,6 +11,13 @@
 #include "prusa_api_helpers.hpp"
 
 #include <marlin_client.hpp>
+#include <printers.h>
+#if PRINTER_IS_PRUSA_MK4()
+    #include <config_store/store_instance.hpp>
+    #include <loaded_filament_color.hpp>
+    #include <encoded_filament.hpp>
+    #include <feature/filament_sensor/filament_sensors_handler.hpp>
+#endif
 #include <common/path_utils.h>
 #include <transfers/monitor.hpp>
 #include <transfers/changed_path.hpp>
@@ -111,6 +118,27 @@ Selector::Accepted PrusaLinkApiV1::accept(const RequestParser &parser, handler::
     if (!parser.check_auth(out)) {
         return Accepted::Accepted;
     }
+
+#if PRINTER_IS_PRUSA_MK4()
+    if (suffix == "filaments" && !FSensors_instance().HasMMU()) {
+        FilamentState state;
+        state.declaration = config_store().loaded_filament_color.get();
+        // A confirmed declaration carries its own material tag, so a concurrent
+        // unload cannot pair an old color with a newly loaded material.
+        const auto material_tag = filament::loaded_color_material(state.declaration);
+        const auto material = material_tag ? EncodedFilamentType::from_data(material_tag).decode() : config_store().get_filament_type(0);
+        if (material != FilamentType::none) {
+            const auto parameters = material.parameters();
+            static_assert(state.material.size() == filament_name_buffer_size);
+            memcpy(state.material.data(), parameters.name.data(), state.material.size());
+            state.material.back() = '\0';
+        } else {
+            state.declaration = 0;
+        }
+        get_only(SendJson(FilamentRenderer(state), parser.can_keep_alive()), parser, out);
+        return Accepted::Accepted;
+    }
+#endif
 
     if (suffix == "storage") {
         get_only(SendJson(EmptyRenderer(get_storage), parser.can_keep_alive()), parser, out);

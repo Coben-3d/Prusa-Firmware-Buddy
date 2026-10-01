@@ -42,6 +42,7 @@
 #include <config_store/store_instance.hpp>
 #include <raii/scope_guard.hpp>
 #include <filament_to_load.hpp>
+#include <loaded_filament_color.hpp>
 #include <common/marlin_client.hpp>
 #include <common/mapi/parking.hpp>
 #include <feature/ramming/ramming_sequence.hpp>
@@ -1222,6 +1223,16 @@ bool Pause::invoke_loop() {
     // Prevent the "waiting for temperature restore" from triggering - the Pause manages temperature safety for extrusion internally
     buddy::SafetyTimerNonBlockingGuard non_blocking_guard;
 
+#if PRINTER_IS_PRUSA_MK4()
+    const bool declares_color = !FSensors_instance().HasMMU() && settings.GetExtruder() == 0
+        && (load_type == LoadType::load || load_type == LoadType::autoload || load_type == LoadType::filament_change || load_type == LoadType::filament_stuck);
+    if (declares_color) {
+        // The spool may change even if its material stays the same. Until the
+        // entire load succeeds, conservatively report no confirmed color.
+        config_store().loaded_filament_color.set(0);
+    }
+#endif
+
     set(LoadState::start);
 
     while (!finished()) {
@@ -1236,6 +1247,13 @@ bool Pause::invoke_loop() {
 #if ENABLED(PID_EXTRUSION_SCALING)
     thermalManager.setExtrusionScalingEnabled(extrusionScalingEnabled);
 #endif // ENABLED(PID_EXTRUSION_SCALING)
+
+#if PRINTER_IS_PRUSA_MK4()
+    if (declares_color && finished_ok()) {
+        const EncodedFilamentType material(config_store().get_filament_type(0));
+        config_store().loaded_filament_color.set(filament::encode_loaded_color(material.data, filament::get_color_to_load()));
+    }
+#endif
 
     return finished_ok();
 }

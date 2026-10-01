@@ -8,6 +8,10 @@
 #include <dynamic_index_mapping.hpp>
 #include <window_menu_virtual.hpp>
 #include <window_menu_callback_item.hpp>
+#include <printers.h>
+#if PRINTER_IS_PRUSA_MK4()
+    #include <menu_item/menu_item_select_menu.hpp>
+#endif
 
 #include <MItem_tools.hpp>
 #include <fsm_preheat_type.hpp>
@@ -27,7 +31,26 @@ public:
     FilamentTypeParameters::Name filament_name;
 };
 
-class WindowMenuPreheat : public WindowMenuVirtual<WindowMenuCallbackItem, MI_FILAMENT> {
+#if PRINTER_IS_PRUSA_MK4()
+class MI_FILAMENT_COLOR final : public MenuItemSelectMenu {
+public:
+    MI_FILAMENT_COLOR();
+    int item_count() const final;
+    void build_item_text(int index, const std::span<char> &buffer) const final;
+
+protected:
+    bool on_item_selected(int old_index, int new_index) final;
+
+private:
+    std::optional<Color> custom_color;
+};
+#endif
+
+class WindowMenuPreheat : public WindowMenuVirtual<WindowMenuCallbackItem, MI_FILAMENT
+#if PRINTER_IS_PRUSA_MK4()
+    , MI_FILAMENT_COLOR
+#endif
+    > {
 
 public:
     WindowMenuPreheat(window_t *parent, const Rect16 &rect);
@@ -51,6 +74,9 @@ protected:
 private:
     enum class Item {
         return_,
+#if PRINTER_IS_PRUSA_MK4()
+        color,
+#endif
         filament_section,
         show_all,
         cooldown,
@@ -59,6 +85,9 @@ private:
 
     static constexpr auto items = std::to_array<DynamicIndexMappingRecord<Item>>({
         { Item::return_, DynamicIndexMappingType::optional_item },
+#if PRINTER_IS_PRUSA_MK4()
+        { Item::color, DynamicIndexMappingType::optional_item },
+#endif
         { Item::filament_section, DynamicIndexMappingType::dynamic_section },
         { Item::adhoc_filament },
         { Item::show_all, DynamicIndexMappingType::optional_item },

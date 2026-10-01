@@ -39,6 +39,7 @@
 #include "static_mem.h"
 #include "status_page.h"
 #include "status_renderer.h"
+#include "filament_renderer.h"
 #include "transfer_renderer.h"
 
 #include <http/types.h>
@@ -148,6 +149,7 @@ namespace handler {
         SendJson<EmptyRenderer>,
         SendJson<TransferRenderer>,
         SendJson<StatusRenderer>,
+        SendJson<FilamentRenderer>,
         printer::GcodeUpload,
         printer::GCodePreview,
         printer::JobCommand,

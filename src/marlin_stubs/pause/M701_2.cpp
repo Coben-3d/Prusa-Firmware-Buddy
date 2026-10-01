@@ -81,6 +81,8 @@ void filament_gcodes::M701_load(FilamentType filament_to_be_loaded, const std::o
 
     const bool do_purge_only = fast_load_length.has_value() && fast_load_length <= 0.0f;
 
+    filament::set_color_to_load(color_to_be_loaded);
+
     if (op_preheat) {
         if (filament_to_be_loaded == FilamentType::none) {
             PreheatData data = PreheatData::make(do_purge_only ? PreheatMode::Purge : PreheatMode::Load, target_extruder, *op_preheat);
@@ -97,7 +99,6 @@ void filament_gcodes::M701_load(FilamentType filament_to_be_loaded, const std::o
         }
     }
     filament::set_type_to_load(filament_to_be_loaded);
-    filament::set_color_to_load(color_to_be_loaded);
 
     pause::Settings settings;
     settings.SetExtruder(target_extruder);
@@ -292,7 +293,6 @@ void filament_gcodes::M1701_autoload(const std::optional<float> &fast_load_lengt
 
         const FilamentType filament = preheat_ret.second;
         filament::set_type_to_load(filament);
-        filament::set_color_to_load(std::nullopt);
 
         mapi::ParkingPosition park_position({ mapi::ParkingPosition::unchanged, mapi::ParkingPosition::unchanged, std::max({ current_position.z + Z_NOZZLE_PARK_RISE, z_min_pos, planner.max_printed_z + Z_NOZZLE_PARK_RISE }) });
         // Returning to previous position is unwanted outside of printing (M1701 should be used only outside of printing)
@@ -374,6 +374,7 @@ void filament_gcodes::M1600_change_filament(FilamentType filament_to_be_loaded, 
     }
 
     // LOAD
+    filament::set_color_to_load(color_to_be_loaded);
     // cannot do normal preheat, since printer is already preheated from unload
     if (filament_to_be_loaded == FilamentType::none) {
         PreheatData data = PreheatData::make(PreheatMode::Change_phase2, target_extruder, preheat);
@@ -389,7 +390,6 @@ void filament_gcodes::M1600_change_filament(FilamentType filament_to_be_loaded, 
         preheat_to(filament_to_be_loaded, target_extruder, PreheatBehavior::no_force_preheat_bed_and_chamber(config_store().filament_change_preheat_all.get()));
     }
     filament::set_type_to_load(filament_to_be_loaded);
-    filament::set_color_to_load(color_to_be_loaded);
 
 #ifndef DO_NOT_RESTORE_Z_AXIS
     // Has to be set before last Pause operation, otherwise it unparks and parks again inbetween operations

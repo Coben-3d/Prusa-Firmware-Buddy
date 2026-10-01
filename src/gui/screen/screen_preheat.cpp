@@ -9,6 +9,10 @@
 #include <utils/string_builder.hpp>
 #include <gui/screen/filament/screen_filament_detail.hpp>
 #include <ScreenHandler.hpp>
+#if PRINTER_IS_PRUSA_MK4()
+    #include <filament_to_load.hpp>
+    #include <feature/filament_sensor/filament_sensors_handler.hpp>
+#endif
 
 using namespace preheat_menu;
 
@@ -32,6 +36,62 @@ void MI_FILAMENT::click(IWindowMenu &) {
     WindowMenuPreheat::handle_filament_selection(filament_type, target_extruder);
 }
 
+#if PRINTER_IS_PRUSA_MK4()
+namespace {
+struct FilamentColorChoice {
+    const char *name;
+    std::optional<Color> color;
+};
+constexpr auto filament_colors = std::to_array<FilamentColorChoice>({
+    { N_("Unknown"), std::nullopt },
+    { N_("Black"), COLOR_BLACK },
+    { N_("White"), COLOR_WHITE },
+    { N_("Gray"), COLOR_GRAY },
+    { N_("Red"), COLOR_RED },
+    { N_("Orange"), COLOR_ORANGE },
+    { N_("Yellow"), COLOR_YELLOW },
+    { N_("Green"), COLOR_GREEN },
+    { N_("Blue"), COLOR_BLUE },
+    { N_("Purple"), COLOR_PURPLE },
+    { N_("Brown"), Color::from_raw(0x8b4513) },
+    { N_("Pink"), Color::from_raw(0xff69b4) },
+});
+} // namespace
+
+MI_FILAMENT_COLOR::MI_FILAMENT_COLOR()
+    : MenuItemSelectMenu(_("Filament Color")) {
+    const auto color = filament::get_color_to_load();
+    int selected = filament_colors.size();
+    for (size_t i = 0; i < filament_colors.size(); ++i) {
+        if (filament_colors[i].color == color) {
+            selected = i;
+            break;
+        }
+    }
+    if (selected == static_cast<int>(filament_colors.size())) {
+        custom_color = color;
+    }
+    set_current_item(selected);
+}
+
+int MI_FILAMENT_COLOR::item_count() const {
+    return filament_colors.size() + (custom_color.has_value() ? 1 : 0);
+}
+
+void MI_FILAMENT_COLOR::build_item_text(int index, const std::span<char> &buffer) const {
+    if (index == static_cast<int>(filament_colors.size())) {
+        snprintf(buffer.data(), buffer.size(), "#%06lX", static_cast<unsigned long>(custom_color->raw));
+    } else {
+        _(filament_colors[index].name).copyToRAM(buffer);
+    }
+}
+
+bool MI_FILAMENT_COLOR::on_item_selected([[maybe_unused]] int old_index, int new_index) {
+    filament::set_color_to_load(new_index == static_cast<int>(filament_colors.size()) ? custom_color : filament_colors[new_index].color);
+    return true;
+}
+#endif
+
 // * WindowMenuPreheat
 WindowMenuPreheat::WindowMenuPreheat(window_t *parent, const Rect16 &rect)
     : WindowMenuVirtual(parent, rect, CloseScreenReturnBehavior::no) //
@@ -41,6 +101,10 @@ WindowMenuPreheat::WindowMenuPreheat(window_t *parent, const Rect16 &rect)
 void WindowMenuPreheat::set_data(const PreheatData &data) {
     index_mapping.set_item_enabled<Item::return_>(data.has_return_option);
     index_mapping.set_item_enabled<Item::cooldown>(data.has_cooldown_option);
+#if PRINTER_IS_PRUSA_MK4()
+    const bool is_loading = data.mode == PreheatMode::Load || data.mode == PreheatMode::Autoload || data.mode == PreheatMode::Change_phase2;
+    index_mapping.set_item_enabled<Item::color>(is_loading && !FSensors_instance().HasMMU());
+#endif
 
     // PreheatData might contain -1 for extruder index - that would screw things up
     extruder_index = data.extruder;
@@ -102,6 +166,12 @@ void WindowMenuPreheat::setup_item(ItemVariant &variant, int index) {
         variant.emplace<WindowMenuCallbackItem>(_("Return"), callback, &img::folder_up_16x16);
         break;
     }
+
+#if PRINTER_IS_PRUSA_MK4()
+    case Item::color:
+        variant.emplace<MI_FILAMENT_COLOR>();
+        break;
+#endif
 
     case Item::cooldown: {
         const auto callback = [] {

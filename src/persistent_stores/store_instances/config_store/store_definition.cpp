@@ -474,6 +474,12 @@ void CurrentStore::set_filament_type(uint8_t index, FilamentType value) {
         value.set_parameters(pending_adhoc_filament_parameters);
     }
 
+#if PRINTER_IS_PRUSA_MK4()
+    if (index == 0 && (value == FilamentType::none || value != get_filament_type(index))) {
+        loaded_filament_color.set(0);
+    }
+#endif
+
     if (value == FilamentType::none) {
 #if HAS_AUTO_RETRACT()
         // On filament removal, it invalidates retracted distance
