@@ -1,5 +1,9 @@
 # Validation du prototype v0.1.0
 
+> Évolution en préparation : [palette visuelle de 60 nuances](INDX-COLOR-PALETTE.md).
+> Prototype `color+2` compilé et testé en logiciel ; interface non vérifiée sur machine.
+> Les téléchargements v0.1.0 conservent leur menu d’origine.
+
 ## Essais matériels déclarés par l’auteur
 
 Le 2 octobre 2026, l’auteur a confirmé le chargement avec couleur violette et

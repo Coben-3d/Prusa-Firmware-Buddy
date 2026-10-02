@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <loaded_filament_color.hpp>
 #include <filament_to_load.hpp>
+#include <filament_color_palette.hpp>
 #include <filament_renderer.h>
 #include <journal/backend.hpp>
 
@@ -265,5 +266,35 @@ TEST_CASE("Interrupted confirmation cannot resurrect a previous spool color", "[
         const auto color = filament::decode_loaded_color(rebooted.get());
         REQUIRE((!color || color == COLOR_WHITE));
         REQUIRE(color != COLOR_RED);
+    }
+}
+
+
+TEST_CASE("Three brown and three blue palette shades keep exact RGB per physical head", "[loaded-color]") {
+    auto state = eight_tools();
+    constexpr std::array<size_t, 6> palette_indices { 6, 8, 10, 12, 15, 17 };
+    MemoryStorage storage;
+    {
+        JournalRecord record(storage);
+        for (size_t i = 0; i < palette_indices.size(); ++i) {
+            const auto color = Color::from_raw(filament::color_palette_rgb[palette_indices[i]]);
+            filament::ColorPaletteModel model(color);
+            REQUIRE(model.activate());
+            REQUIRE(model.result().accepted);
+            REQUIRE(model.result().color == color);
+            const auto declaration = filament::encode_loaded_color(1, model.result().color);
+            record.set(declaration, i);
+            state.slots[i].declaration = declaration;
+        }
+    }
+    JournalRecord rebooted(storage);
+    const auto body = render(state, 64);
+    if (const char *path = std::getenv("INDX_SHADE_FIXTURE")) std::ofstream(path) << body;
+    for (size_t i = 0; i < palette_indices.size(); ++i) {
+        const auto color = Color::from_raw(filament::color_palette_rgb[palette_indices[i]]);
+        REQUIRE(filament::decode_loaded_color(rebooted.get(i)) == color);
+        char hex[8];
+        snprintf(hex, sizeof(hex), "#%06lX", static_cast<unsigned long>(color.raw));
+        REQUIRE(body.find(hex) != std::string::npos);
     }
 }

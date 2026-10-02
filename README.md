@@ -1,5 +1,9 @@
 # Filaments locaux Prusa — MK4 et CORE One + INDX
 
+> Évolution en préparation : [palette visuelle de 60 nuances](doc/INDX-COLOR-PALETTE.md).
+> Prototype `color+2` compilé et testé en logiciel ; interface non vérifiée sur machine.
+> Les téléchargements v0.1.0 conservent leur menu d’origine.
+
 Choisissez la couleur au chargement sur l’écran de l’imprimante, puis
 **synchronisez matière et couleur dans PrusaSlicer** par PrusaLink local.
 Pour INDX, la synchronisation porte sur les huit emplacements physiques.

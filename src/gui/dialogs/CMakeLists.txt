@@ -31,3 +31,7 @@ if(BOARD STREQUAL "XBUDDY" OR BOARD STREQUAL "XLBUDDY")
   add_subdirectory(resolution_480x320)
   target_sources(firmware PRIVATE dialog_numeric_input.cpp)
 endif()
+
+if(HAS_INDX)
+  target_sources(firmware PRIVATE dialog_filament_color.cpp)
+endif()

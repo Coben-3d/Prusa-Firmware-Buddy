@@ -177,3 +177,10 @@ target_include_directories(
   )
 target_link_libraries(loaded_filament_color_tests SG14 freertos-mock)
 add_catch_test(loaded_filament_color_tests)
+
+# Visual color picker: native state tests without display/hardware dependencies.
+add_executable(filament_color_palette_tests filament_color_palette_tests.cpp)
+target_include_directories(
+  filament_color_palette_tests PRIVATE ${CMAKE_BINARY_DIR}/include ${CMAKE_SOURCE_DIR}/src/common
+  )
+add_catch_test(filament_color_palette_tests)

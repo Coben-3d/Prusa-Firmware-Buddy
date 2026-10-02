@@ -1,5 +1,9 @@
 # CORE One + INDX : détails du portage
 
+> Évolution en préparation : [palette visuelle de 60 nuances](INDX-COLOR-PALETTE.md).
+> Prototype `color+2` compilé et testé en logiciel ; interface non vérifiée sur machine.
+> Les téléchargements v0.1.0 conservent leur menu d’origine.
+
 Pour installer et utiliser le prototype, voir [le guide commun](LOCAL-FILAMENTS.md).
 Le fonctionnement sur la machine de l’auteur a été confirmé le 2 octobre 2026 ;
 les limites de cette confirmation sont dans [la validation](LOCAL-FILAMENTS-VALIDATION.md).

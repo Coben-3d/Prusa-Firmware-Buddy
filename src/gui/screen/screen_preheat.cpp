@@ -17,75 +17,53 @@
 #include <option/has_indx.h>
 #if HAS_INDX()
     #include <filament_to_load.hpp>
-    #include <menu_item/menu_item_select_menu.hpp>
+    #include <dialog_filament_color.hpp>
+    #include <display.hpp>
 #endif
 
 #if HAS_INDX()
 namespace {
-struct FilamentColorChoice {
-    const char *name;
-    std::optional<Color> color;
-};
-constexpr auto filament_colors = std::to_array<FilamentColorChoice>({
-    { N_("Unknown"), std::nullopt },
-    { N_("Black"), COLOR_BLACK },
-    { N_("White"), COLOR_WHITE },
-    { N_("Gray"), COLOR_GRAY },
-    { N_("Red"), COLOR_RED },
-    { N_("Orange"), COLOR_ORANGE },
-    { N_("Yellow"), COLOR_YELLOW },
-    { N_("Green"), COLOR_GREEN },
-    { N_("Blue"), COLOR_BLUE },
-    { N_("Purple"), COLOR_PURPLE },
-    { N_("Brown"), Color::from_raw(0x8b4513) },
-    { N_("Pink"), Color::from_raw(0xff69b4) },
-});
-class MI_FILAMENT_COLOR final : public MenuItemSelectMenu {
+class MI_FILAMENT_COLOR final : public IWindowMenuItem {
 public:
-    MI_FILAMENT_COLOR();
-    int item_count() const final;
-    string_view_utf8 build_item_text(int index, ItemTextParams &params) const final;
+    MI_FILAMENT_COLOR()
+        : IWindowMenuItem(_("Filament Color"), 144), color_(filament::get_color_to_load()) {}
+
 protected:
-    bool on_item_selected(const OnItemSelectedArgs &args) final;
+    void click(IWindowMenu &menu) final {
+        const auto previous_focus = menu.focused_item_index();
+        const auto choice = select_filament_color_dialog(color_);
+        // Modal dialogs restore the underlying menu state; restore focus as the
+        // official MenuItemSelectMenu does before touching this virtual item.
+        menu.move_focus_to_index(previous_focus);
+        if (!choice.accepted) return;
+        filament::set_color_to_load(choice.color);
+        color_ = choice.color;
+        InValidateExtension();
+    }
+
+    void printExtension(Rect16 rect, Color text, Color background, ropfn) const final {
+        char hex[8] {};
+        const auto value = color_
+            ? (snprintf(hex, sizeof(hex), "#%06lX", static_cast<unsigned long>(color_->raw)), string_view_utf8::MakeRAM(hex))
+            : _("Unknown");
+        const int top = rect.Top() + (rect.Height() - 20) / 2;
+        display::fill_rect(Rect16(rect.Left(), top, 24, 20), text);
+        if (color_) {
+            display::fill_rect(Rect16(rect.Left() + 2, top + 2, 20, 16), *color_);
+        } else {
+            display::draw_line({ static_cast<uint16_t>(rect.Left() + 3), static_cast<uint16_t>(top + 3) },
+                { static_cast<uint16_t>(rect.Left() + 20), static_cast<uint16_t>(top + 16) }, background);
+        }
+        render_text_align(Rect16(rect.Left() + 32, rect.Top(), rect.Width() - 32, rect.Height()), value,
+            GuiDefaults::FontMenuItems, background, text, {}, Align_t::RightCenter(), false);
+    }
+
 private:
-    std::optional<Color> custom_color;
+    std::optional<Color> color_;
 };
 } // namespace
-
-MI_FILAMENT_COLOR::MI_FILAMENT_COLOR()
-    : MenuItemSelectMenu(_("Filament Color")) {
-    const auto color = filament::get_color_to_load();
-    int selected = filament_colors.size();
-    for (size_t i = 0; i < filament_colors.size(); ++i) {
-        if (filament_colors[i].color == color) {
-            selected = i;
-            break;
-        }
-    }
-    if (selected == static_cast<int>(filament_colors.size())) {
-        custom_color = color;
-    }
-    set_current_item(selected);
-}
-
-int MI_FILAMENT_COLOR::item_count() const {
-    return filament_colors.size() + (custom_color.has_value() ? 1 : 0);
-}
-
-string_view_utf8 MI_FILAMENT_COLOR::build_item_text(int index, ItemTextParams &params) const {
-    if (index == static_cast<int>(filament_colors.size())) {
-        snprintf(params.buffer.data(), params.buffer.size(), "#%06lX", static_cast<unsigned long>(custom_color->raw));
-        return string_view_utf8::MakeRAM(params.buffer.data());
-    }
-    return _(filament_colors[index].name);
-}
-
-bool MI_FILAMENT_COLOR::on_item_selected(const OnItemSelectedArgs &args) {
-    filament::set_color_to_load(args.new_index == static_cast<int>(filament_colors.size()) ? custom_color : filament_colors[args.new_index].color);
-    return true;
-}
-
 #endif
+
 
 
 #if HAS_ANFC()
