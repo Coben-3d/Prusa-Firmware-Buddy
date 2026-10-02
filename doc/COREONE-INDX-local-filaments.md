@@ -1,79 +1,73 @@
-# CORE One + INDX : matière et couleur locales
+# CORE One + INDX : détails du portage
 
-État au 2 octobre 2026 : prototype compilé et validé sur ordinateur, aucun essai sur l’INDX réelle. Benjamin confirme que son kit est installé, que sa machine affiche 6.9.1 et que l’appendice xBuddy est encore intact. L’accès PrusaLink de cette machine reste à confirmer. L’adresse 192.168.68.50 donnée précédemment concernait la MK4 ; elle n’est pas réutilisée pour l’INDX.
+Pour installer et utiliser le prototype, voir [le guide commun](LOCAL-FILAMENTS.md).
+Le fonctionnement sur la machine de l’auteur a été confirmé le 2 octobre 2026 ;
+les limites de cette confirmation sont dans [la validation](LOCAL-FILAMENTS-VALIDATION.md).
 
-La demande initiale de faisabilité a évolué : après son essai MK4 réussi, Benjamin a demandé de réaliser la même fonction sur sa CORE One + INDX. Le travail réalisé ici est l’adaptation logicielle, sa compilation, ses tests isolés et la préparation des fichiers. Aucun flash, changement matériel, connexion à l’INDX, création d’identifiants ou envoi de commande d’impression n’a été effectué. Les nouvelles branches restent locales.
+## Base et indices
 
-## Base vérifiée et fonction obtenue
+Base officielle 6.9.1 : `f1a123aba502bf8b043fcd9c779ee20b9253a62e`.
+Firmware du projet : `6.9.1-color+1`, cible `COREONE_INDX`, carte `XBUDDY`.
+Slicer : 2.9.6, modèle `COREONE_INDX8T`, huit lignes et huit buses, sans MMU.
+Les indices physiques, virtuels et G-code restent des types distincts.
+Les conversions officielles sont utilisées ; le contrat v2 accepte la
+correspondance physique/virtuelle identique de cette base et rejette une autre.
 
-Le firmware part du tag officiel [6.9.1 INDX](https://github.com/prusa3d/Prusa-Firmware-Buddy/releases/tag/v6.9.1), commit `f1a123aba502bf8b043fcd9c779ee20b9253a62e`. Le code déclare huit indices de têtes physiques. Ses indices physiques, virtuels et G-code sont des types distincts ; leurs conversions sont utilisées explicitement. La correspondance physique/virtuelle de cette version est identique, tandis que le mappage G-code peut être différent. [Indices officiels](https://github.com/prusa3d/Prusa-Firmware-Buddy/blob/f1a123aba502bf8b043fcd9c779ee20b9253a62e/src/common/tool_index.cpp), [têtes INDX](https://github.com/prusa3d/Prusa-Firmware-Buddy/blob/f1a123aba502bf8b043fcd9c779ee20b9253a62e/src/common/tool/printer/tools_indx.cpp).
+## Stockage et opérations
 
-Le prototype mémorise une déclaration de couleur distincte pour chaque tête. Dans le menu de chargement, la couleur se choisit avant la matière habituelle. La palette comporte inconnu, noir, blanc, gris, rouge, orange, jaune, vert, bleu, violet, marron et rose. Une couleur RGB déjà fournie par un G-code peut également être affichée. La déclaration ne devient persistante qu’après un chargement terminé avec succès. Un changement de matière, le début d’un nouveau chargement ou d’un déchargement invalident la couleur de la tête concernée. Une purge seule la conserve. Une annulation avant tout début d’opération ne modifie pas la déclaration confirmée.
+La nouvelle clé de journal `INDX Loaded Filament Color v1` contient huit valeurs
+64 bits : RGB sur les bits 0–23, indicateur connu au bit 24, matière encodée
+sur les bits 32–39. Zéro signifie inconnu ; le noir reste une couleur connue.
+Les clés et versions de calibration du journal sont conservées.
 
-La version officielle possède déjà des couleurs temporaires pour certains chargements et G-codes. Elle possède aussi la matière chargée par tête. Ce qui est ajouté est leur association persistante et leur lecture locale pour les huit emplacements ; la couleur n’est pas détectée par un capteur. Le champ `loaded` reflète la matière enregistrée par le firmware, pas une certification de présence physique. [Couleur temporaire existante](https://github.com/prusa3d/Prusa-Firmware-Buddy/blob/f1a123aba502bf8b043fcd9c779ee20b9253a62e/src/common/filament_to_load.cpp), [stockage matière](https://github.com/prusa3d/Prusa-Firmware-Buddy/blob/f1a123aba502bf8b043fcd9c779ee20b9253a62e/src/persistent_stores/store_instances/config_store/store_definition.hpp).
+Le choix de couleur précède la matière dans le menu de chargement. La couleur
+temporaire est atomique et réinitialisée au début de chaque opération.
+Seule la fin réussie du chargement confirme la déclaration de la tête visée.
+Les chargements interrompus, déchargements et changements de matière
+invalident cette tête. Une purge seule conserve sa déclaration.
 
-PrusaSlicer reste basé sur 2.9.6 et sur le prototype MK4 validé, commit `910851b09cf4dc5877b3ad495b4b86ea24281c13`. Il accepte le modèle officiel `COREONE_INDX8T`, avec huit buses et huit lignes de filament, hors mode MMU. Les profils INDX ne se trouvaient pas dans l’ancien catalogue embarqué 2.4.14 : le paquet utilise le catalogue officiel PrusaResearch 2.5.10, commit `65c5c8f1e1c3836f306119c49d717759cbc368db`. [Catalogue officiel](https://github.com/prusa3d/PrusaSlicer-settings-prusa-fff/blob/65c5c8f1e1c3836f306119c49d717759cbc368db/PrusaResearch/2.5.10.ini), [compatibilité Slicer](https://github.com/prusa3d/PrusaSlicer-settings-prusa-fff/blob/65c5c8f1e1c3836f306119c49d717759cbc368db/PrusaResearch/index.idx).
+## API locale
 
-Le bouton sous les couleurs lit les huit emplacements et sélectionne les profils matière compatibles. Un profil déjà compatible avec la matière chargée conserve ses réglages personnalisés. Sinon, le profil Generic unique est privilégié ; plusieurs candidats nécessitent un choix. Un profil introuvable reste inchangé. Une tête vide ou désactivée garde ses réglages Slicer. Une couleur inconnue conserve la couleur actuelle de sa ligne. Changer de profil matière modifie normalement ses paramètres d’impression, dont les températures. Les dialogues usuels de conservation/abandon des modifications restent utilisés ; Annuler conserve les huit lignes et leurs couleurs. Une réponse reçue après un changement de projet, d’imprimante ou de réglages est écartée.
+`GET /api/v1/filaments`, sous l’authentification PrusaLink existante.
+Autres méthodes authentifiées : 405. Le firmware officiel ne fournit pas cette route.
 
-Le premier paquet est préparé avec le profil officiel **HF0.4 huit buses**. Il faut vérifier qu’il correspond aux buses réellement installées avant toute impression. Les profils INDX 4T, XL, MMU et les correspondances physiques/virtuelles non identiques ne sont pas pris en charge par ce premier prototype.
+- `schema_version`: 2 ; `printer_model`: `COREONE_INDX`.
+- `indexing`: `physical_tools` ; `tool_count`: 8.
+- `slots`: huit objets identifiés de 0 à 7, chacun contenant `slot`, `virtual_tool`,
+  `enabled`, `loaded`, `material`, `color`, `source`.
+- `source`: `user_declared` ; matière absente et couleur inconnue : `null`.
+- RGB : `#RRGGBB`. Noir : `#000000`.
+- `loaded` représente la matière mémorisée, pas une mesure indépendante de présence.
 
-## API et composants modifiés
+Le renderer possède son instantané et conserve ses curseurs entre les blocs
+JSON. Slicer réordonne les slots, refuse doublons et valeurs incohérentes,
+limite le corps à 4 096 octets et refuse les redirections.
+Les huit profils sont résolus avant mutation. Annuler conserve lignes et couleurs.
+La sélection physique, la configuration et le projet sont revérifiés avant
+d’appliquer une réponse asynchrone.
 
-Nouvelle route locale : **`GET /api/v1/filaments`**. Elle conserve l’authentification PrusaLink existante (clé API ou Digest) ; aucune nouvelle clé n’est créée. Autres méthodes : 405. Le firmware officiel 6.9.1 ne propose pas cette route. La réponse utilise `schema_version: 2`, `printer_model: COREONE_INDX`, `indexing: physical_tools`, `tool_count: 8` et huit objets `slots`, numérotés 0 à 7. Les lignes de l’interface correspondent aux têtes 1 à 8. Chaque objet contient `slot`, `virtual_tool`, `enabled`, `loaded`, `material`, `color` et `source: user_declared`. Matière absente et couleur inconnue sont `null`, et noir est `#000000`.
+## Fichiers et entretien
 
-Slicer vérifie les huit indices, leurs doublons, les types JSON, les champs obligatoires, la correspondance physique/virtuelle, les RGB et les valeurs incohérentes. Les tableaux peuvent arriver dans un autre ordre : ils sont réordonnés par index. La limite de réponse reste 4 096 octets ; la réponse huit têtes utilisée pour le test de contrat mesure 1 044 octets. Les redirections sont refusées. Le protocole MK4 version 1 reste accepté pour une seule ligne.
+| Composant | Fichiers principaux |
+|---|---|
+| Déclaration et journal | `src/common/loaded_filament_color.hpp`, `src/persistent_stores/store_instances/config_store/store_definition.*` |
+| Chargement | `src/common/filament_to_load.cpp`, `src/marlin_stubs/pause/M701_2.cpp`, `src/marlin_stubs/pause/pause.cpp` |
+| Menu | `src/gui/screen/screen_preheat.cpp` |
+| PrusaLink | `lib/WUI/link_content/prusa_link_api_v1.cpp`, `lib/WUI/nhttp/filament_renderer.*`, `send_json.cpp` |
+| Slicer | `LoadedFilamentColor*`, `GUI/Sidebar.*`, catalogues français |
 
-| Composant | Fichiers principaux | Changement |
-|---|---|---|
-| Firmware, journal | `src/common/loaded_filament_color.hpp`, `src/persistent_stores/store_instances/config_store/store_definition.{hpp,cpp}` | Nouvelle clé `INDX Loaded Filament Color v1`, tableau de huit déclarations 64 bits associant matière, présence d’une couleur et RGB ; contrôles de collision du journal conservés |
-| Firmware, chargement | `src/common/filament_to_load.cpp`, `src/marlin_stubs/pause/{M701_2.cpp,pause.cpp}` | Couleur temporaire atomique, initialisation avant choix, confirmation après succès, invalidation de la seule tête concernée |
-| Firmware, écran | `src/gui/screen/screen_preheat.cpp`, catalogues PO français/POT | Ligne couleur dans les modes chargement, changement et autoload, sélection matière conservée |
-| Firmware, PrusaLink | `lib/WUI/link_content/prusa_link_api_v1.cpp`, `lib/WUI/nhttp/{filament_renderer.*,handler.h,send_json.cpp}`, `lib/WUI/CMakeLists.txt` | Capture par tête physique, JSON progressif possédant son instantané, route protégée réservée à la cible CORE One INDX |
-| Slicer, protocole | `src/slic3r/Utils/LoadedFilamentColor*` | Protocole version 2, validation stricte, application des huit couleurs sans redimensionnement des réglages |
-| Slicer, interface | `src/slic3r/GUI/Sidebar.{cpp,hpp}` | Bouton et résolution des profils pour huit lignes, annulation avant mutation, contrôles des réponses tardives ; garde contre un événement de workflow reçu après destruction des onglets |
-| Slicer, distribution | `version.inc`, traduction française, catalogue officiel 2.5.10 dans le dossier de réglages isolé | Identifiant `PrusaSlicer-2.9.6+FilamentLocal-INDX`, profil huit buses et hôte PrusaLink explicite |
+Le BBF publié est construit avec `BOOTLOADER=EMPTY`, `BOOTLOADER_UPDATE=OFF`.
+Il n’a pas de TLV de bootloader 11/12 ; le code principal commence à `0x08020200`.
+Ses programmes `fw-indx_head.bin`, `fw-tool_offset_sensor.bin` et
+`fw-xbuddy-extension.bin` sont identiques octet pour octet à ceux de l’officiel 6.9.1.
 
-La synchronisation fonctionne entre le Mac et PrusaLink sur le réseau local. **Prusa Connect n’est pas nécessaire.** Le code officiel de télémétrie Connect expose déjà des matières par emplacement, avec son propre indexage et ses températures. Cela ne démontre pas l’existence d’une API publique permettant à Slicer de lire les couleurs chargées : celles-ci ne figurent pas dans ces champs de télémétrie 6.9.1. Une extension cloud demanderait de vérifier un contrat API côté service et ses autorisations, puis d’y ajouter ou transporter la déclaration persistante. Aucune compatibilité avec une API Connect publique de couleurs n’est affirmée. [Télémétrie officielle](https://github.com/prusa3d/Prusa-Firmware-Buddy/blob/f1a123aba502bf8b043fcd9c779ee20b9253a62e/src/connect/render.cpp), [PrusaLink/Connect](https://help.prusa3d.com/article/prusa-connect-and-prusalink-explained_302608).
+Pour reconstruire cette variante, suivre le README amont et conserver la cible,
+GCC ARM 13.3.1, Release, le suffixe `-color+1` et `BUILD_NUMBER=1`.
+Fournir les trois programmes secondaires officiels 6.9.1 via
+`INDX_HEAD_BINARY_PATH`, `TOOL_OFFSET_SENSOR_BINARY_PATH` et
+`XBUDDY_EXTENSION_BINARY_PATH`. Une recompilation avec d’autres programmes
+secondaires ne reproduit pas le paquet publié.
 
-## Validation effectuée
-
-- Firmware ARM GCC 13.3.1 compilé pour `COREONE_INDX`, carte `XBUDDY`, extension `STANDARD`, version **6.9.1-color+1**. Contrôles officiels du journal, watchdog et protections thermiques conservés. La compilation macOS des tests adapte uniquement les options GCC non acceptées par Apple Clang.
-- **9 tests firmware, 2 434 assertions** : encodage noir/blanc/inconnu, couleur atomique, vrai journal après redémarrage, huit têtes indépendantes, compactage du journal, écritures interrompues, JSON progressif avec buffers de 64 à 256 octets et instantané indépendant du rendu.
-- **9 tests unitaires Slicer, 112 assertions** : JSON v1/v2, huit indices et champs incomplets, ordre des slots, incohérences, couleurs et conservation des autres réglages.
-- **19 tests HTTP** : authentification fictive clé/Digest, erreurs 401/403/404, serveur hors ligne, timeout, annulation, réponses invalides/trop longues et absence de fuite vers une redirection, huit slots via réseau loopback.
-- **22 scénarios graphiques natifs**, dont neuf INDX : huit profils PLA/PETG et températures correspondantes, indices réordonnés, têtes vides/désactivées, couleur inconnue, profil personnalisé conservé, dialogue Annuler, mauvais modèle/protocole/indices et réponse tardive. Chaque essai termine avec une fermeture normale. Un plantage de fermeture dû à un événement de workflow tardif a été identifié par sa pile et corrigé ; les 22 scénarios ont ensuite repassé.
-- **Contrat firmware/Slicer vérifié** : une réponse produite par le vrai `FilamentRenderer` est reçue par le vrai client HTTP PrusaLink de Slicer ; les huit matières et couleurs sont identiques.
-
-Total : **59 cas de test réussis**, plus le test de contrat. Les tests graphiques utilisent des réglages temporaires, un serveur fictif et un blocage du trousseau système. Les identifiants réels n’ont pas été lus. La mise à jour de traduction française conserve les 5 945 traductions précédemment compilées.
-
-L’édition matérielle n’a pas été simulée intégralement : les mouvements INDX, les capteurs, la palette sur son écran réel, le chargement/M600 en conditions réelles et la persistance après coupure réelle restent à essayer. Les tests de coupure portent sur les octets écrits par le journal simulé, pas sur une coupure électrique de l’imprimante. Le programme principal utilise 66,76 % de la FLASH, 63,13 % de la RAM et 94,83 % de la CCMRAM dans cette compilation. La marge CCMRAM doit être suivie lors des futures évolutions ; aucune consommation comparative avec un firmware officiel recompilé à l’identique n’est annoncée.
-
-## Fichiers préparés et conditions d’essai réel
-
-Tous les fichiers sont sur le SSD, dans `/Volumes/JAUNE - SAVE BEN/PrusaDev/artifacts/indx-trial` :
-
-- `prototype-6.9.1-color+1/COREONE_INDX_6.9.1-color+1-prototype.bbf` : prototype non signé, SHA-256 **1086472360f51e1b4166902794773f2d29db775c772af1e8c35132f6c1f37b54**.
-- `official-6.9.1/COREONE_COREONE+GEN2_INDX_firmware_6.9.1.bbf` : fichier officiel de retour, SHA-256 **9b356bfc21476171e0c4df445a8b092565e5ea5f79f08b4964001a4f7442d7a4**, comparé au digest de l’asset GitHub officiel. La signature ECDSA officielle n’a pas été vérifiée séparément hors imprimante.
-- `Lancer PrusaSlicer INDX.command` : lance le Slicer ARM64 fourni avec ses ressources et un dossier de réglages neuf `settings`, sans installation dans Applications. Ce lancement bloque la lecture du trousseau. Aucun hôte ni identifiant d’imprimante n’est prérempli ; PrusaLink devra être renseigné par Benjamin lui-même.
-- `prototype-6.9.1-color+1/manifest.json`, `slicer-manifest.json`, `validation.json` : versions, empreintes, composition et résultats de tests.
-
-Le BBF prototype a été vérifié : checksum du programme principal correct, digest de ses ressources correct, cible `printer_type=7`, `printer_version=10`, signature de développement nulle. Il est construit avec **`BOOTLOADER=EMPTY`, `BOOTLOADER_UPDATE=OFF`**, sans payload de bootloader TLV 11/12. Le code commence à `0x08020200`. Les trois programmes secondaires fournis (`fw-indx_head.bin`, `fw-tool_offset_sensor.bin`, `fw-xbuddy-extension.bin`) sont identiques octet pour octet à ceux du BBF officiel 6.9.1. Aucun firmware secondaire personnalisé n’est introduit.
-
-**Blocage matériel confirmé : l’appendice xBuddy est intact.** Prusa explique que l’acceptation d’un firmware non officiel sur xBuddy impose sa rupture. Ce retrait est physique et irréversible ; revenir à un BBF officiel ne rétablit pas l’appendice. Il n’existe pas, dans les sources consultées, de déverrouillage logiciel documenté préservant cet appendice. La documentation concerne la famille CORE One/xBuddy ; la cible INDX retenue utilise bien cette carte. Aucune modification des cartes de tête, capteurs ou protections thermiques n’est requise par notre changement. [Conditions officielles du firmware personnalisé](https://help.prusa3d.com/article/flashing-custom-firmware-core-one-l-core-one-mk4-s-mk3-9-s-mk3-5-s_814967).
-
-Prusa précise que la rupture seule n’annule pas la garantie, mais décline la responsabilité des dommages ou préjudices visés dans son avertissement ; une réponse Prusa sur cette page distingue les pannes causées par les modifications. Cela ne constitue pas une garantie de prise en charge de dommages dus au prototype, ni une conclusion sur un contrat d’assurance ou une certification. L’accord obtenu pour la MK4 ne vaut pas accord de retrait sur la CORE One. Après confirmation de l’état intact, Benjamin a déclaré vouloir le retirer lui-même et a demandé les instructions. L’agent n’a effectué aucune manipulation matérielle ; le retrait et le flash ne sont pas déclarés réalisés.
-
-La [photo officielle Prusa](https://help.prusa3d.com/wp-content/uploads/2024/04/9e2b3d5d8e34750731b95fc19df8905d.jpg) a été consultée : elle montre la petite languette marquée `!`, cerclée en orange, près du connecteur blanc `A_TEMP` et de la prise USB de service. La consigne Prusa consiste à rompre sa partie centrale étroite avec un petit tournevis plat ou une pince fine. Pour l’accès à l’électronique, le [guide officiel CORE One, PDF pages 7–8](https://help.prusa3d.com/wp-content/uploads/generated/printer-maintenance_247_guide_908859_en_2026-06-23.pdf#page=7) décrit le cache arrière puis le couvercle xBuddy. Il prescrit au préalable le refroidissement, l’arrêt et le débranchement secteur. C’est un guide CORE One, pas un tutoriel illustrant spécifiquement le câblage de la conversion INDX ; si la carte ou les caches diffèrent, une photo de la machine réelle permettra d’identifier l’élément avant toute rupture. Seules les étapes d’accès sont utiles ici ; le remplacement complet et ses déconnexions ne sont pas nécessaires.
-
-Après décision explicite concernant cette modification, l’essai minimum serait : confirmer les buses/profils et l’accès PrusaLink local, flasher manuellement le BBF prévu, vérifier démarrage et huit têtes, charger deux têtes avec matières/couleurs différentes, synchroniser leurs lignes dans Slicer, puis redémarrer et resynchroniser. Tester ensuite déchargement, annulation, changement de matière et une tête désactivée avant d’envisager une impression. Il ne faut pas charger une bobine uniquement pour confirmer une ancienne couleur : l’état antérieur du prototype démarre inconnu et doit être déclaré lors d’une opération normale.
-
-Pour revenir à l’officiel, utiliser le BBF officiel **6.9.1 INDX** préparé et la procédure USB Prusa correspondant à la machine. La procédure de même version/downgrade prévoit de presser la molette quand le logo apparaît puis de confirmer FLASH. Elle est liée depuis la page officielle de mise à jour qui inclut l’INDX. Le prototype n’a pas changé la version du journal ni les clés de calibration existantes ; l’officiel ignore la nouvelle clé inconnue, et une compaction ultérieure peut effacer ces seules déclarations de couleur. Cette compatibilité est étayée par le code, sans essai réel de retour à ce stade. Un reset usine n’est pas nécessaire à notre extension et effacerait les réglages. [Mise à jour incluant INDX](https://help.prusa3d.com/article/how-to-update-firmware-core-one-l-core-one-core-one-indx-mk4-s-mk3-9-s-mk3-5-s-xl_453086), [réinstallation/même version](https://help.prusa3d.com/article/how-to-downgrade-firmware-core-one-mk4-s-mk3-9-s-mk3-5-s-xl_725930), [chargement des clés du journal](https://github.com/prusa3d/Prusa-Firmware-Buddy/blob/f1a123aba502bf8b043fcd9c779ee20b9253a62e/src/persistent_stores/journal/store.hpp).
-
-## Difficulté, maintenance et voie sans flash
-
-L’adaptation a demandé une évolution du protocole et de l’interface, ainsi que la reprise du menu de chargement refondu en 6.9.1. Les points les plus sensibles sont les indices physiques/virtuels, la confirmation uniquement après succès, la conservation des profils personnalisés et les annulations sur huit lignes. Le prototype couvre ces limites dans son protocole et ses tests ; il ne prétend pas couvrir toutes les séquences mécaniques INDX.
-
-Les branches locales sont `feature/coreone-indx-loaded-filament-colors` pour Buddy et `feature/indx-local-filaments` pour Slicer. Les branches et le binaire MK4 précédents sont conservés. À chaque nouvelle version officielle : revoir les opérations de chargement, les types de têtes, le journal et le rendu PrusaLink, refaire les tests, reconstruire avec les bons programmes secondaires officiels et vérifier le paquet. Une adoption upstream réduirait cette maintenance. La future architecture Slicer 3.x demandera une nouvelle intégration de l’interface ; elle n’est pas considérée comme compatible automatiquement.
-
-**Sans flash et sans rupture de l’appendice**, la partie Slicer peut déjà fonctionner face à huit déclarations simulées. Une alternative pratique serait un service local où Benjamin déclare manuellement matière/couleur par tête ; celui-ci fournirait le même JSON à Slicer tout en gardant le firmware officiel. Ce service n’a pas été développé ici. Il ne récupérerait pas la couleur choisie sur l’écran officiel ni ne garantirait qu’une bobine a réellement changé. Le flux demandé « choix sur écran de la machine → mémoire firmware → PrusaLink » nécessite le changement firmware préparé, ou une future prise en charge officielle.
+À chaque mise à jour Prusa, revoir types et correspondances de têtes,
+opérations de chargement, journal, contrat HTTP et profils Slicer.
+INDX 4T et les autres modèles ne sont pas validés par ce portage.
