@@ -14,6 +14,79 @@
 #include <bsod/bsod.h>
 #include <client_response_texts.hpp>
 #include <feature/compatibility_checks/filament_compatibility.hpp>
+#include <option/has_indx.h>
+#if HAS_INDX()
+    #include <filament_to_load.hpp>
+    #include <menu_item/menu_item_select_menu.hpp>
+#endif
+
+#if HAS_INDX()
+namespace {
+struct FilamentColorChoice {
+    const char *name;
+    std::optional<Color> color;
+};
+constexpr auto filament_colors = std::to_array<FilamentColorChoice>({
+    { N_("Unknown"), std::nullopt },
+    { N_("Black"), COLOR_BLACK },
+    { N_("White"), COLOR_WHITE },
+    { N_("Gray"), COLOR_GRAY },
+    { N_("Red"), COLOR_RED },
+    { N_("Orange"), COLOR_ORANGE },
+    { N_("Yellow"), COLOR_YELLOW },
+    { N_("Green"), COLOR_GREEN },
+    { N_("Blue"), COLOR_BLUE },
+    { N_("Purple"), COLOR_PURPLE },
+    { N_("Brown"), Color::from_raw(0x8b4513) },
+    { N_("Pink"), Color::from_raw(0xff69b4) },
+});
+class MI_FILAMENT_COLOR final : public MenuItemSelectMenu {
+public:
+    MI_FILAMENT_COLOR();
+    int item_count() const final;
+    string_view_utf8 build_item_text(int index, ItemTextParams &params) const final;
+protected:
+    bool on_item_selected(const OnItemSelectedArgs &args) final;
+private:
+    std::optional<Color> custom_color;
+};
+} // namespace
+
+MI_FILAMENT_COLOR::MI_FILAMENT_COLOR()
+    : MenuItemSelectMenu(_("Filament Color")) {
+    const auto color = filament::get_color_to_load();
+    int selected = filament_colors.size();
+    for (size_t i = 0; i < filament_colors.size(); ++i) {
+        if (filament_colors[i].color == color) {
+            selected = i;
+            break;
+        }
+    }
+    if (selected == static_cast<int>(filament_colors.size())) {
+        custom_color = color;
+    }
+    set_current_item(selected);
+}
+
+int MI_FILAMENT_COLOR::item_count() const {
+    return filament_colors.size() + (custom_color.has_value() ? 1 : 0);
+}
+
+string_view_utf8 MI_FILAMENT_COLOR::build_item_text(int index, ItemTextParams &params) const {
+    if (index == static_cast<int>(filament_colors.size())) {
+        snprintf(params.buffer.data(), params.buffer.size(), "#%06lX", static_cast<unsigned long>(custom_color->raw));
+        return string_view_utf8::MakeRAM(params.buffer.data());
+    }
+    return _(filament_colors[index].name);
+}
+
+bool MI_FILAMENT_COLOR::on_item_selected(const OnItemSelectedArgs &args) {
+    filament::set_color_to_load(args.new_index == static_cast<int>(filament_colors.size()) ? custom_color : filament_colors[args.new_index].color);
+    return true;
+}
+
+#endif
+
 
 #if HAS_ANFC()
     #include <feature/openprinttag/tool_tag.hpp>
@@ -76,6 +149,9 @@ protected:
 private:
     enum class Item {
         return_,
+#if HAS_INDX()
+        color,
+#endif
 #if HAS_ANFC()
         from_openprinttag,
 #endif
@@ -87,6 +163,9 @@ private:
 
     static constexpr auto items = std::to_array<DynamicIndexMappingRecord<Item>>({
         { Item::return_, DynamicIndexMappingType::optional_item },
+#if HAS_INDX()
+            { Item::color, DynamicIndexMappingType::optional_item },
+#endif
 #if HAS_ANFC()
             { Item::from_openprinttag, DynamicIndexMappingType::optional_item },
 #endif
@@ -169,6 +248,11 @@ void WindowMenuPreheat::set_data(const PreheatData &data) {
 
     index_mapping.set_item_enabled<Item::return_>(data.has_return_option);
     index_mapping.set_item_enabled<Item::cooldown>(data.has_cooldown_option);
+#if HAS_INDX()
+    index_mapping.set_item_enabled<Item::color>(
+        std::holds_alternative<VirtualToolIndex>(tool)
+        && (mode == PreheatMode::standard_load || mode == PreheatMode::change_load || mode == PreheatMode::autoload));
+#endif
 
 #if HAS_ANFC()
     index_mapping.set_item_enabled<Item::from_openprinttag>(
@@ -232,6 +316,12 @@ void WindowMenuPreheat::setup_item(ItemVariant &variant, int index) {
 #if HAS_ANFC()
     case Item::from_openprinttag:
         variant.emplace<MI_FROM_OPENPRINTTAG>(std::get<VirtualToolIndex>(tool), mode);
+        break;
+#endif
+
+#if HAS_INDX()
+    case Item::color:
+        variant.emplace<MI_FILAMENT_COLOR>();
         break;
 #endif
 

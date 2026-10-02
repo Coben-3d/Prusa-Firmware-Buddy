@@ -250,6 +250,12 @@ void CurrentStore::set_filament_type(VirtualToolIndex virtual_tool, FilamentType
         value = new_value;
     }
 
+#if HAS_INDX()
+    if (value == FilamentType::none || value != get_filament_type(virtual_tool)) {
+        loaded_filament_colors.set(virtual_tool.to_raw(), 0);
+    }
+#endif
+
     if (value == FilamentType::none) {
 #if HAS_AUTO_RETRACT()
         // On filament removal, it invalidates retracted distance

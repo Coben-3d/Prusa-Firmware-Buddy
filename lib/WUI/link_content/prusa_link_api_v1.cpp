@@ -12,6 +12,14 @@
 
 #include <buddy/filename_defs.hpp>
 #include <marlin_client.hpp>
+#include <option/has_indx.h>
+#include <printers.h>
+#if HAS_INDX() && PRINTER_IS_PRUSA_COREONE()
+    #include <config_store/store_instance.hpp>
+    #include <loaded_filament_color.hpp>
+    #include <encoded_filament.hpp>
+    #include <tool_index.hpp>
+#endif
 #include <common/path_utils.h>
 #include <transfers/monitor.hpp>
 #include <transfers/changed_path.hpp>
@@ -112,6 +120,36 @@ Selector::Accepted PrusaLinkApiV1::accept(const RequestParser &parser, handler::
     if (!parser.check_auth(out)) {
         return Accepted::Accepted;
     }
+
+#if HAS_INDX() && PRINTER_IS_PRUSA_COREONE()
+    if (suffix == "filaments") {
+        static_assert(PhysicalToolIndex::count == 8 && VirtualToolIndex::count == 8);
+        FilamentState state;
+        const auto declarations = config_store().loaded_filament_colors.get_all();
+        for (const auto virtual_tool : VirtualToolIndex::all()) {
+            const auto physical_tool = virtual_tool.to_physical();
+            auto &slot = state.slots[physical_tool.to_raw()];
+            slot.virtual_tool = virtual_tool.to_raw();
+            slot.enabled = physical_tool.is_enabled();
+            if (!slot.enabled) { continue; }
+            const auto material = config_store().get_filament_type(virtual_tool);
+            slot.loaded = material != FilamentType::none;
+            if (!slot.loaded) { continue; }
+            const EncodedFilamentType encoded_material(material);
+            const auto declaration = declarations[virtual_tool.to_raw()];
+            // A stale declaration never pairs an old color with a new material.
+            if (filament::loaded_color_material(declaration) == encoded_material.data) {
+                slot.declaration = declaration;
+            }
+            const auto parameters = material.parameters();
+            static_assert(FilamentSlotState{}.material.size() == filament_name_buffer_size);
+            memcpy(slot.material.data(), parameters.name.data(), slot.material.size());
+            slot.material.back() = '\0';
+        }
+        get_only(SendJson(FilamentRenderer(state), parser.can_keep_alive()), parser, out);
+        return Accepted::Accepted;
+    }
+#endif
 
     if (suffix == "storage") {
         get_only(SendJson(EmptyRenderer(get_storage), parser.can_keep_alive()), parser, out);

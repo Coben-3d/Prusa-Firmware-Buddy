@@ -8424,3 +8424,47 @@ msgstr ""
 #: src/gui/screen/selftest/screen_manual_belt_tuning.cpp:49
 msgid "tighten"
 msgstr ""
+
+#: src/gui/screen/screen_preheat.cpp
+msgid "Filament Color"
+msgstr ""
+
+#: src/gui/screen/screen_preheat.cpp
+msgid "White"
+msgstr ""
+
+#: src/gui/screen/screen_preheat.cpp
+msgid "Gray"
+msgstr ""
+
+#: src/gui/screen/screen_preheat.cpp
+msgid "Red"
+msgstr ""
+
+#: src/gui/screen/screen_preheat.cpp
+msgid "Orange"
+msgstr ""
+
+#: src/gui/screen/screen_preheat.cpp
+msgid "Yellow"
+msgstr ""
+
+#: src/gui/screen/screen_preheat.cpp
+msgid "Green"
+msgstr ""
+
+#: src/gui/screen/screen_preheat.cpp
+msgid "Blue"
+msgstr ""
+
+#: src/gui/screen/screen_preheat.cpp
+msgid "Purple"
+msgstr ""
+
+#: src/gui/screen/screen_preheat.cpp
+msgid "Brown"
+msgstr ""
+
+#: src/gui/screen/screen_preheat.cpp
+msgid "Pink"
+msgstr ""

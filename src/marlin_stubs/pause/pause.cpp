@@ -49,6 +49,7 @@ static_assert(HAS_PAUSE());
 #include <config_store/store_instance.hpp>
 #include <raii/scope_guard.hpp>
 #include <filament_to_load.hpp>
+#include <loaded_filament_color.hpp>
 #include <common/marlin_client.hpp>
 #include <common/mapi/parking.hpp>
 #include <feature/ramming/ramming_sequence.hpp>
@@ -1481,6 +1482,22 @@ bool Pause::perform(LoadType load_type_, const pause::Settings &settings_) {
 }
 
 bool Pause::invoke_loop() {
+#if HAS_INDX()
+    // A new spool may have the same material. Clear before any parking motion;
+    // a cancelled or interrupted operation never confirms the selected color.
+    const auto declaration_tool = settings.virtual_tool();
+    const bool declares_color = load_type == LoadType::load || load_type == LoadType::autoload
+        || load_type == LoadType::filament_change || load_type == LoadType::filament_stuck;
+    if (declares_color || load_type == LoadType::load_to_gears
+        || load_type == LoadType::unload || load_type == LoadType::unload_confirm
+        || load_type == LoadType::unload_from_gears
+#if HAS_SPOOL_JOIN() && HAS_TOOLCHANGER()
+        || load_type == LoadType::unload_spool_join
+#endif
+    ) {
+        config_store().loaded_filament_colors.set(declaration_tool.to_raw(), 0);
+    }
+#endif
 #if ENABLED(PID_EXTRUSION_SCALING)
     bool extrusionScalingEnabled = thermalManager.getExtrusionScalingEnabled();
     thermalManager.setExtrusionScalingEnabled(false);
@@ -1509,6 +1526,13 @@ bool Pause::invoke_loop() {
     thermalManager.setExtrusionScalingEnabled(extrusionScalingEnabled);
 #endif // ENABLED(PID_EXTRUSION_SCALING)
 
+#if HAS_INDX()
+    if (declares_color && finished_ok()) {
+        const EncodedFilamentType material(config_store().get_filament_type(declaration_tool));
+        config_store().loaded_filament_colors.set(declaration_tool.to_raw(),
+            filament::encode_loaded_color(material.data, filament::get_color_to_load()));
+    }
+#endif
     return finished_ok();
 }
 

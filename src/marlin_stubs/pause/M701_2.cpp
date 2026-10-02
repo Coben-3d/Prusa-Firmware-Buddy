@@ -72,6 +72,9 @@ void filament_gcodes::M701_load(const M701LoadArgs &args) {
     FilamentType filament_to_be_loaded = args.filament_to_be_loaded;
     const VirtualToolIndex virtual_tool = args.virtual_tool;
     const bool do_purge_only = args.fast_load_length.has_value() && *args.fast_load_length <= 0.0f;
+#if HAS_INDX()
+    filament::set_color_to_load(args.color_to_be_loaded);
+#endif
 
     if (args.op_preheat) {
         if (filament_to_be_loaded == FilamentType::none) {
@@ -96,7 +99,9 @@ void filament_gcodes::M701_load(const M701LoadArgs &args) {
         }
     }
     filament::set_type_to_load(filament_to_be_loaded);
+#if !HAS_INDX()
     filament::set_color_to_load(args.color_to_be_loaded);
+#endif
 
     pause::Settings settings;
     settings.SetExtruder(virtual_tool);
@@ -336,7 +341,9 @@ void filament_gcodes::M1701_autoload(const std::optional<float> &fast_load_lengt
 
         const FilamentType filament = preheat_ret.second;
         filament::set_type_to_load(filament);
+#if !HAS_INDX()
         filament::set_color_to_load(std::nullopt);
+#endif
 
         mapi::ParkingPosition park_position = { .z = mapi::ParkingPosition::AtLeast { .above_print = Z_NOZZLE_PARK_RISE, .absolute = z_min_pos } };
         // Returning to previous position is unwanted outside of printing (M1701 should be used only outside of printing)
@@ -419,6 +426,9 @@ void filament_gcodes::M1600_change_filament(FilamentType filament_to_be_loaded, 
     }
 
     // LOAD
+#if HAS_INDX()
+    filament::set_color_to_load(color_to_be_loaded);
+#endif
     // cannot do normal preheat, since printer is already preheated from unload
     if (filament_to_be_loaded == FilamentType::none) {
         const FilamentSelectionArgs data {
@@ -438,7 +448,9 @@ void filament_gcodes::M1600_change_filament(FilamentType filament_to_be_loaded, 
         preheat_to(filament_to_be_loaded, virtual_tool.to_physical(), PreheatBehavior::for_filament_load(false));
     }
     filament::set_type_to_load(filament_to_be_loaded);
+#if !HAS_INDX()
     filament::set_color_to_load(color_to_be_loaded);
+#endif
 
     // Update park position for load phase (move to front/load position instead of staying at unload/waste bin position)
     settings.SetParkPoint(mapi::get_parking_position(mapi::ParkPosition::load));

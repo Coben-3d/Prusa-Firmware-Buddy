@@ -488,6 +488,12 @@ struct CurrentStore
     /// filament (true).
     StoreItem<EncodedBitset<16>, 0, ItemFlag::printer_state, journal::hash("Loaded filament is previous")> loaded_filament_is_previous;
 
+#if HAS_INDX()
+    /// Confirmed declaration per virtual tool. Each item atomically carries its
+    /// material tag and optional RGB; zero means unknown/unconfirmed.
+    StoreItemArray<uint64_t, 0, ItemFlag::printer_state, journal::hash("INDX Loaded Filament Color v1"), 16, EXTRUDERS> loaded_filament_colors;
+#endif
+
     /// User-defined filament ordering. Does not need to contain all the filaments - the rest will be appended to the back using the standard rules
     StoreItem<std::array<EncodedFilamentType, max_total_filament_count>, EncodedFilamentType {}, ItemFlag::user_presets, journal::hash("Filament Order V2")> filament_order;
 
