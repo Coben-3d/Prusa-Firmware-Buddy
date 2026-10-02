@@ -1,3 +1,39 @@
+# Filaments locaux Prusa — MK4 et CORE One + INDX
+
+Choisissez la couleur au chargement sur l’écran de l’imprimante, puis
+**synchronisez matière et couleur dans PrusaSlicer** par PrusaLink local.
+Pour INDX, la synchronisation porte sur les huit emplacements physiques.
+Prusa Connect n’est pas nécessaire.
+
+**Prototype communautaire expérimental de Coben-3d.** L’auteur a confirmé le
+fonctionnement sur ses machines le 2 octobre 2026 ; le périmètre des contrôles
+et les limites sont documentés. Ce fork n’est pas une version officielle Prusa.
+
+- **[Téléchargements v0.1.0](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.1.0)**
+- **[Installer et utiliser](doc/LOCAL-FILAMENTS.md)**
+- [Tests et limites](doc/LOCAL-FILAMENTS-VALIDATION.md)
+- [Firmware MK4](https://github.com/Coben-3d/Prusa-Firmware-Buddy/tree/feature/mk4-loaded-filament-color) · [firmware CORE One INDX](https://github.com/Coben-3d/Prusa-Firmware-Buddy/tree/feature/coreone-indx-loaded-filament-colors)
+- [PrusaSlicer modifié et ses sources](https://github.com/Coben-3d/PrusaSlicer/tree/feature/indx-local-filaments)
+
+| Version | Périmètre |
+|---|---|
+| MK4 6.5.7-color+4 | Une bobine, sans MMU actif |
+| CORE One INDX 6.9.1-color+1 | Huit têtes, profil HF0.4 de départ |
+| PrusaSlicer 2.9.6+FilamentLocal-INDX | MK4 et INDX ; paquet Apple Silicon, macOS 26.2 minimum |
+
+Le firmware personnalisé non signé demande la rupture irréversible de la
+languette xBuddy `!`. Lire les [conditions Prusa](https://help.prusa3d.com/article/flashing-custom-firmware-core-one-l-core-one-mk4-s-mk3-9-s-mk3-5-s_814967)
+et le guide avant installation. Les profils, versions et BBF doivent correspondre
+à votre machine.
+
+**English:** community prototype that stores a user-selected filament color on
+the printer and syncs loaded material and color into PrusaSlicer over local
+PrusaLink. Supports single-spool MK4 and CORE One INDX 8-tool. Downloaded macOS
+binaries require Apple Silicon and macOS 26.2+. Custom unsigned firmware needs
+the irreversible xBuddy appendix removal. Read the installation guide first.
+
+---
+
 # Buddy
 This repository includes source code and firmware releases for the Original Prusa 3D printers based on the 32-bit ARM microcontrollers.
 
