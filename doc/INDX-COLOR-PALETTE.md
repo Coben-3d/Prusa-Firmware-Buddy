@@ -111,8 +111,10 @@ Un tel éditeur serait une évolution distincte.
 - Aucun accès à l’imprimante, aucune modification de clé USB, aucun flash pour
   cette évolution. Aucun test matériel du sélecteur n’est revendiqué.
 
+Sources utilisées pour le BBF : `855b9975c3d574a3e0ef6d1dd9e7ad992487ed4d` (sans modifications locales).
+
 Fichier local préparé : `COREONE_INDX_6.9.1-color+2-palette-prototype.bbf` (3,639,074 octets).
-SHA-256 : `d0db5d874018d9bc5df61bd763fe4e2f1e48946ab4eb7536c5b058ef059eac4b`.
+SHA-256 : `adec1df6b37496bdc78cf9d3ccecf836083afefc16f70414ec65ccb6a52da089`.
 
 Avant publication d’un nouveau téléchargement : vérifier sur la machine le
 rendu des nuances, le cadre et le code ; la molette et, si activé, le tactile ;
