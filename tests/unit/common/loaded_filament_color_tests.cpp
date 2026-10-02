@@ -1,5 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <loaded_filament_color.hpp>
+#include <loaded_filament_color_edit.hpp>
+#include <journal/store_item.hpp>
+#include <journal/store_item_array.hpp>
 #include <filament_to_load.hpp>
 #include <filament_color_palette.hpp>
 #include <filament_renderer.h>
@@ -282,7 +285,7 @@ TEST_CASE("Three brown and three blue palette shades keep exact RGB per physical
             REQUIRE(model.activate());
             REQUIRE(model.result().accepted);
             REQUIRE(model.result().color == color);
-            const auto declaration = filament::encode_loaded_color(1, model.result().color);
+            const auto declaration = filament::encode_loaded_color(i % 2 ? 2 : 1, model.result().color);
             record.set(declaration, i);
             state.slots[i].declaration = declaration;
         }
@@ -296,5 +299,139 @@ TEST_CASE("Three brown and three blue palette shades keep exact RGB per physical
         char hex[8];
         snprintf(hex, sizeof(hex), "#%06lX", static_cast<unsigned long>(color.raw));
         REQUIRE(body.find(hex) != std::string::npos);
+    }
+}
+
+
+namespace {
+journal::Backend *editing_backend = nullptr;
+journal::Backend &get_editing_backend() { return *editing_backend; }
+using EditingColors = journal::JournalItemArray<uint64_t, 0, 0, get_editing_backend, test_id, 16, 8>;
+
+class EditingJournal {
+    journal::Backend backend_;
+
+public:
+    EditingColors colors {};
+
+    explicit EditingJournal(MemoryStorage &storage)
+        : backend_(0, storage.bytes.size(), storage) {
+        REQUIRE(editing_backend == nullptr);
+        editing_backend = &backend_;
+        backend_.init([this] { colors.ram_dump(0); });
+        backend_.load_all([this](uint16_t id, const Bytes &data) {
+            colors.check_init(id, data);
+        }, {});
+    }
+    ~EditingJournal() { editing_backend = nullptr; }
+};
+} // namespace
+
+TEST_CASE("Direct correction keeps eight head materials, other colors and pending load separate", "[loaded-color][color-edit]") {
+    for (uint8_t target = 0; target < 8; ++target) {
+        MemoryStorage storage;
+        auto state = eight_tools();
+        std::array<uint64_t, 8> expected;
+        filament::set_color_to_load(COLOR_RED);
+        {
+            EditingJournal journal(storage);
+            for (uint8_t i = 0; i < 8; ++i) {
+                expected[i] = state.slots[i].declaration;
+                journal.colors.set(i, expected[i]);
+            }
+            const auto material = filament::loaded_color_material(expected[target]);
+            const filament::LoadedColorEditSnapshot before { material, expected[target] };
+            const auto chosen = Color::from_raw(filament::color_palette_rgb[6 + target]);
+            REQUIRE(filament::try_edit_loaded_color(journal.colors, target, before, material, true, chosen));
+            expected[target] = filament::encode_loaded_color(material, chosen);
+            REQUIRE(filament::get_color_to_load() == COLOR_RED);
+            REQUIRE(filament::loaded_color_material(journal.colors.get(target)) == material);
+            const auto bytes_after = storage.bytes;
+            // Reconfirming the same choice does not write another journal record.
+            REQUIRE(filament::try_edit_loaded_color(journal.colors, target,
+                { material, expected[target] }, material, true, chosen));
+            REQUIRE(storage.bytes == bytes_after);
+        }
+        EditingJournal rebooted(storage);
+        for (uint8_t i = 0; i < 8; ++i) {
+            REQUIRE(rebooted.colors.get(i) == expected[i]);
+            state.slots[i].declaration = rebooted.colors.get(i);
+        }
+        const auto body = render(state, 64);
+        for (uint8_t i = 0; i < 8; ++i) {
+            char hex[8];
+            snprintf(hex, sizeof(hex), "#%06lX", static_cast<unsigned long>(filament::decode_loaded_color(expected[i])->raw));
+            REQUIRE(body.find(hex) != std::string::npos);
+        }
+        REQUIRE(body.find("PLA") != std::string::npos);
+        REQUIRE(body.find("PETG") != std::string::npos);
+        if (target == 7) {
+            if (const char *fixture = std::getenv("INDX_EDIT_FIXTURE")) std::ofstream(fixture) << body;
+        }
+    }
+    filament::set_color_to_load(std::nullopt);
+}
+
+TEST_CASE("Empty or busy heads and changed material or declaration reject a stale edit", "[loaded-color][color-edit]") {
+    MemoryStorage storage;
+    EditingJournal journal(storage);
+    const auto original = filament::encode_loaded_color(1, COLOR_BLUE);
+    journal.colors.set(3, original);
+    const filament::LoadedColorEditSnapshot before { 1, original };
+    const auto bytes_before = storage.bytes;
+    REQUIRE_FALSE(filament::try_edit_loaded_color(journal.colors, 3, before, 1, false, COLOR_WHITE));
+    REQUIRE_FALSE(filament::try_edit_loaded_color(journal.colors, 3, before, 0, true, COLOR_WHITE));
+    REQUIRE_FALSE(filament::try_edit_loaded_color(journal.colors, 3, before, 2, true, COLOR_WHITE));
+    REQUIRE_FALSE(filament::try_edit_loaded_color(journal.colors, 3, { 0, original }, 0, true, COLOR_WHITE));
+    REQUIRE(storage.bytes == bytes_before);
+    journal.colors.set(3, 0); // Unload/load start invalidated the declaration.
+    REQUIRE_FALSE(filament::try_edit_loaded_color(journal.colors, 3, before, 1, true, COLOR_WHITE));
+    REQUIRE(journal.colors.get(3) == 0);
+    const auto newer = filament::encode_loaded_color(1, COLOR_PURPLE);
+    journal.colors.set(3, newer); // A newer confirmation must not be overwritten.
+    REQUIRE_FALSE(filament::try_edit_loaded_color(journal.colors, 3, before, 1, true, COLOR_WHITE));
+    REQUIRE(journal.colors.get(3) == newer);
+}
+
+TEST_CASE("Loaded material can be declared without reload and unknown remains different from black", "[loaded-color][color-edit]") {
+    MemoryStorage storage;
+    {
+        EditingJournal journal(storage);
+        REQUIRE(journal.colors.get(7) == 0);
+        REQUIRE(filament::try_edit_loaded_color(journal.colors, 7, { 1, 0 }, 1, true, COLOR_BLACK));
+        const auto black = journal.colors.get(7);
+        REQUIRE(filament::decode_loaded_color(black) == COLOR_BLACK);
+        filament::ColorPaletteModel cancelled(COLOR_BLACK);
+        cancelled.move(3);
+        REQUIRE_FALSE(cancelled.result().accepted);
+        REQUIRE(journal.colors.get(7) == black);
+        REQUIRE(filament::try_edit_loaded_color(journal.colors, 7, { 1, black }, 1, true, std::nullopt));
+        REQUIRE(filament::loaded_color_material(journal.colors.get(7)) == 1);
+    }
+    EditingJournal rebooted(storage);
+    REQUIRE_FALSE(filament::decode_loaded_color(rebooted.colors.get(7)));
+    REQUIRE(filament::loaded_color_material(rebooted.colors.get(7)) == 1);
+}
+
+TEST_CASE("Interrupted direct correction leaves only the old or new color and preserves other heads", "[loaded-color][color-edit]") {
+    for (size_t budget = 0; budget < 25; ++budget) {
+        MemoryStorage storage;
+        const auto old_color = filament::encode_loaded_color(1, COLOR_BLUE);
+        const auto new_color = filament::encode_loaded_color(1, COLOR_WHITE);
+        {
+            EditingJournal journal(storage);
+            for (uint8_t i = 0; i < 8; ++i) journal.colors.set(i, old_color);
+            storage.write_budget = budget;
+            REQUIRE(filament::try_edit_loaded_color(journal.colors, 5, { 1, old_color }, 1, true, COLOR_WHITE));
+        }
+        storage.write_budget.reset();
+        EditingJournal rebooted(storage);
+        for (uint8_t i = 0; i < 8; ++i) {
+            if (i == 5) {
+                REQUIRE((rebooted.colors.get(i) == old_color || rebooted.colors.get(i) == new_color));
+            } else {
+                REQUIRE(rebooted.colors.get(i) == old_color);
+            }
+        }
     }
 }

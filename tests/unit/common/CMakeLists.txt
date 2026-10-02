@@ -163,7 +163,8 @@ add_executable(
   )
 target_include_directories(
   loaded_filament_color_tests
-  PRIVATE ${CMAKE_BINARY_DIR}/include
+  PRIVATE loaded_color_stubs
+          ${CMAKE_BINARY_DIR}/include
           ${CMAKE_SOURCE_DIR}/include
           ${CMAKE_SOURCE_DIR}/src
           ${CMAKE_SOURCE_DIR}/src/common

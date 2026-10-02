@@ -4,3 +4,7 @@ target_sources(
           screen_filament_management_list.cpp screen_filaments_loaded.cpp
           screen_filaments_reorder.cpp screen_filaments_visibility.cpp
   )
+
+if(HAS_INDX)
+  target_sources(firmware PRIVATE screen_filament_colors.cpp)
+endif()

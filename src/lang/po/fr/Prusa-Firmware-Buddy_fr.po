@@ -9447,3 +9447,11 @@ msgstr "Marron"
 #: src/gui/screen/screen_preheat.cpp
 msgid "Pink"
 msgstr "Rose"
+
+#: src/gui/screen/filament/screen_filament_colors.cpp
+msgid "Filament Colors"
+msgstr "Couleurs des filaments"
+
+#: src/gui/screen/filament/screen_filament_colors.cpp
+msgid "Filament changed or printer is busy. Reopen the color palette."
+msgstr "Filament modifié ou imprimante occupée. Rouvrez la palette de couleurs."

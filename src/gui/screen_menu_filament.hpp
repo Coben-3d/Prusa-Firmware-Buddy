@@ -11,10 +11,17 @@
 #include <option/has_toolchanger.h>
 #include <option/has_wastebin_fill_tracking.h>
 #include <gui/screen/filament/screen_filaments_loaded.hpp>
+#include <option/has_indx.h>
+#if HAS_INDX()
+    #include <gui/screen/filament/screen_filament_colors.hpp>
+#endif
 
 using ScreenMenuFilament__ = ScreenMenu<GuiDefaults::MenuFooter,
     MI_RETURN,
     MI_LOADED_FILAMENT,
+#if HAS_INDX()
+    MI_FILAMENT_COLORS,
+#endif
 #if HAS_WASTEBIN_FILL_TRACKING()
     MI_NOZZLE_CLEANER_EMPTY_WASTEBIN,
 #endif

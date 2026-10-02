@@ -43,9 +43,10 @@ public:
         }
     }
 
-    consteval JournalItemArrayBase()
-        requires(sizeof(JournalItemArrayBase) == sizeof(ItemArray)) // Current implementation of journal relies heavily on this
-    {
+    consteval JournalItemArrayBase() {
+        // Check layout after the type is complete (also supported by Clang).
+        // Current implementation of journal relies heavily on this.
+        static_assert(sizeof(JournalItemArrayBase) == sizeof(ItemArray));
         if constexpr (is_std_array_v<DefaultVal>) {
             data_array = default_val;
         } else {

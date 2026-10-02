@@ -4,9 +4,10 @@ Cette évolution remplace la liste de couleurs nommées du prototype `color+1`
 par une palette de cases colorées. Elle répond au besoin de distinguer plusieurs
 bobines bleues ou marron sur une CORE One + INDX à huit têtes.
 
-**État : code compilé et tests logiciels réussis ; palette non vérifiée sur
-l’écran d’une imprimante.** La confirmation matérielle du prototype `color+1`
-ne valide pas cette nouvelle interface. La version publique
+**État : code compilé et tests logiciels réussis ; Benjamin a confirmé le
+fonctionnement sur sa CORE One + INDX le 2 octobre 2026, après installation
+manuelle.** Il s’agit de son retour utilisateur, sans capture instrumentée ni
+validation détaillée de tous les parcours. La version publique
 [v0.1.0](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.1.0)
 conserve son menu et ses fichiers d’origine.
 
@@ -108,8 +109,10 @@ Un tel éditeur serait une évolution distincte.
 - Contrôle du BBF : checksum principal et hash des ressources valides, signature
   personnalisée vide, aucune entrée de bootloader 11/12 ; les trois programmes
   secondaires sont identiques octet pour octet à ceux de l’officiel 6.9.1.
-- Aucun accès à l’imprimante, aucune modification de clé USB, aucun flash pour
-  cette évolution. Aucun test matériel du sélecteur n’est revendiqué.
+- Le BBF a été copié et vérifié sur la clé USB, puis la clé a été éjectée.
+  Benjamin a ensuite installé le firmware et signalé que la palette fonctionne.
+  L’agent n’a pas connecté l’imprimante ni effectué le flash. Ce retour ne
+  constitue pas une validation détaillée de tous les parcours matériels.
 
 Sources utilisées pour le BBF : `855b9975c3d574a3e0ef6d1dd9e7ad992487ed4d` (sans modifications locales).
 
@@ -127,3 +130,5 @@ Ce BBF est pour la CORE One + INDX ciblée ici. Les conditions de firmware
 personnalisé et la procédure de retour à l’officiel restent celles du
 [guide commun](LOCAL-FILAMENTS.md). Le portage de cette nouvelle grille sur MK4
 n’a pas été réalisé dans cette évolution.
+
+La correction directe par extrudeur est décrite dans [le menu color+3](INDX-FILAMENT-COLOR-EDIT.md), à tester séparément.
