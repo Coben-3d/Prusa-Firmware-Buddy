@@ -98,8 +98,30 @@ est compatible ; son exécutable n’a pas été modifié.
 
 La cible est `COREONE_INDX`, carte `XBUDDY`, base officielle **6.9.1**,
 `BUILD_NUMBER=3`, suffixe `-color+3`, Release ARM GCC 13.3.1,
-`BOOTLOADER=EMPTY` et `BOOTLOADER_UPDATE=OFF`. Le résultat de compilation et
-le checksum du fichier final sont consignés ici après vérification du BBF.
+`BOOTLOADER=EMPTY` et `BOOTLOADER_UPDATE=OFF`. Compilation ARM réussie
+depuis le commit propre `a65b049c353e9d28d949776a1d73a4715e0351eb`.
+
+Fichier local : `COREONE_INDX_6.9.1-color+3-direct-colors-prototype.bbf` (3,641,290 octets).
+
+SHA-256 : `01e03cf82f170e9ffbaaf1f96397f1f980c8db3af2a0967821b2700e55bddce3`.
+
+Les checksums principal et ressources du BBF sont valides. Il ne contient
+aucune entrée de bootloader 11/12 ; les trois programmes secondaires INDX,
+capteur d’offset et extension xBuddy sont identiques octet pour octet à
+l’officiel 6.9.1. Les deux nouveaux messages français et « Extrudeur » ont
+été vérifiés dans le `fr.mo` embarqué.
+
+Occupation mesurée à l’édition de liens : FLASH 1,316,192 octets,
+RAM 124,056 octets, CCMRAM 62,148 octets. La limite de stockage
+du nouvel écran passe l’assertion de `ScreenFactory` à la compilation.
+
+Le BBF est préparé pour l’essai local et n’a pas remplacé les fichiers de la
+release publique v0.1.0. Le nouveau menu n’est pas encore validé sur machine.
+
+Le 2 octobre 2026, le BBF color+3 a été copié sur la clé INDX `NO NAME`,
+vérifié par SHA-256 puis la clé a été éjectée. L’ancien BBF color+2 a été
+sauvegardé et vérifié sur le SSD avant son retrait de la clé ; les autres
+fichiers ont été conservés. Aucun flash ni connexion à l’imprimante par l’agent.
 
 ## Essai sur l’imprimante
 
