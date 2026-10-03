@@ -132,3 +132,9 @@ personnalisé et la procédure de retour à l’officiel restent celles du
 n’a pas été réalisé dans cette évolution.
 
 La correction directe par extrudeur est décrite dans [le menu color+3](INDX-FILAMENT-COLOR-EDIT.md), à tester séparément.
+
+## Téléchargement actuel
+
+La palette est incluse dans **color+3**, fourni dans la [release v0.2.0](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.2.0).
+Cette version ajoute la correction directe. Le [guide INDX](INSTALL-COREONE-INDX.md)
+indique le BBF et le Slicer complet à télécharger. v0.1.0 conserve le menu initial.

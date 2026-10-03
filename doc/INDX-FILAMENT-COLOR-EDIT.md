@@ -5,9 +5,10 @@ de la CORE One + INDX. Elle réutilise la palette visuelle de 60 nuances du
 prototype [color+2](INDX-COLOR-PALETTE.md), dont Benjamin a signalé le
 fonctionnement sur sa machine le 2 octobre 2026.
 
-**Le nouveau menu color+3 reste à essayer sur la machine.** Les tests logiciels
-de la correction sont réussis ; ils ne constituent pas un essai de navigation
-sur l’écran. Les téléchargements de la release v0.1.0 restent inchangés.
+**Color+3 est disponible dans la [release v0.2.0](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.2.0).** Après son
+installation, l’auteur a rapporté que l’ensemble fonctionnait. Ce retour global
+ne documente pas chaque parcours matériel ci-dessous. Les tests logiciels ne
+remplacent pas ces observations. La release v0.1.0 est conservée avec color+1.
 
 ## Utilisation
 
@@ -115,8 +116,9 @@ Occupation mesurée à l’édition de liens : FLASH 1,316,192 octets,
 RAM 124,056 octets, CCMRAM 62,148 octets. La limite de stockage
 du nouvel écran passe l’assertion de `ScreenFactory` à la compilation.
 
-Le BBF est préparé pour l’essai local et n’a pas remplacé les fichiers de la
-release publique v0.1.0. Le nouveau menu n’est pas encore validé sur machine.
+Ce même BBF est publié dans v0.2.0 sous le nom `COREONE_INDX_6.9.1-color+3.bbf`.
+Les fichiers v0.1.0 sont conservés. Le fonctionnement global a été rapporté
+par l’auteur ; les étapes détaillées du protocole ci-dessous ne sont pas toutes documentées.
 
 Le 2 octobre 2026, le BBF color+3 a été copié sur la clé INDX `NO NAME`,
 vérifié par SHA-256 puis la clé a été éjectée. L’ancien BBF color+2 a été
@@ -136,8 +138,8 @@ Après installation manuelle du nouveau BBF, sans lancer d’impression :
 6. Vérifier qu’une tête vide ou désactivée reste grisée. Si possible, vérifier
    le refus d’une sélection devenue périmée après une opération distante.
 
-La validation de color+2 rapportée par Benjamin ne couvre pas ces nouveaux
-parcours. Les mesures de pile et la navigation réelle restent à vérifier sur
+Le retour global de fonctionnement de color+3 ne démontre pas séparément chacun
+de ces parcours. Les mesures de pile et la navigation réelle restent à vérifier sur
 machine. À chaque mise à jour Prusa, revoir le menu Filament, les indices de
 têtes, le journal et les transitions FSM.
 
