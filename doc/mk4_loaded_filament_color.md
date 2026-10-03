@@ -1,6 +1,6 @@
 # MK4 : déclaration locale de matière et couleur
 
-Pour installer et utiliser le prototype, voir [le guide commun](LOCAL-FILAMENTS.md).
+Pour installer et utiliser le prototype, voir [le guide MK4](INSTALL-MK4.md) et [le guide commun](LOCAL-FILAMENTS.md).
 Base officielle 6.5.7 : `7119a302d6d0bc144c57b631d778656c8a2745f6`.
 Version du prototype : **6.5.7-color+4**, MK4 mono-bobine, sans MMU actif.
 Le flux écran → PrusaLink → Slicer a été confirmé par l’auteur sur sa machine.
@@ -57,3 +57,7 @@ en fournissant un dossier de compilation. Le firmware virtuel utilise
 `tests/integration/test_loaded_filament_color.py`.
 La variante distribuée utilise le mode bootloader vide et un BBF non signé.
 Les instructions générales de compilation amont restent dans le README.
+
+La release v0.2.0 réutilise ce BBF color+4 inchangé. La palette de nuances
+et le menu de correction directe INDX ne sont pas encore portés sur MK4.
+Le Slicer est une application personnalisée complète, commune aux deux machines.

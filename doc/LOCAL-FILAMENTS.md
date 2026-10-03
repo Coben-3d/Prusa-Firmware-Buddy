@@ -11,17 +11,33 @@ sa CORE One équipée d’INDX. Cette confirmation du flux utilisateur ne consti
 pas une validation de toutes les couleurs, de chaque tête, des longues impressions
 ou du retour au firmware officiel.
 
+**Ce projet demande deux éléments : notre firmware sur l’imprimante et
+notre version complète personnalisée de PrusaSlicer à télécharger. Ce n’est
+pas un plugin, module ou add-on à installer dans PrusaSlicer officiel.**
+Le Slicer conserve ses fonctions habituelles et ajoute la synchronisation
+locale. Le raccourci de l’application officielle ne contient pas ce bouton.
+
+- [Installer sur MK4](INSTALL-MK4.md) : une bobine, sans MMU actif.
+- [Installer sur CORE One / CORE One+ avec INDX 8 têtes](INSTALL-COREONE-INDX.md).
+- **CORE One normale V1 sans INDX : portage en pause, aucun BBF fourni.**
+
+Deux branches firmware distinctes sont entretenues dans le même dépôt, avec
+un Slicer commun compatible avec les deux. Les BBF ne sont pas interchangeables.
+La palette visuelle et la correction directe INDX ne sont pas encore portées
+sur MK4. Les modèles MK4S, INDX 4T et CORE One L ne sont pas validés ici.
+
 ## Télécharger et choisir sa version
 
-Les fichiers et leurs empreintes SHA-256 sont dans la [publication v0.1.0](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.1.0).
+Les fichiers et leurs empreintes SHA-256 sont dans la [publication v0.2.0](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.2.0).
 
 | Machine | Firmware du projet | Base officielle | Configuration prévue |
 |---|---|---|---|
 | MK4 | `MK4_6.5.7-color+4.bbf` | 6.5.7 | Une bobine, sans MMU actif |
-| CORE One + INDX | `COREONE_INDX_6.9.1-color+1.bbf` | 6.9.1 INDX | Huit têtes, profil `COREONE_INDX8T` |
+| CORE One + INDX | `COREONE_INDX_6.9.1-color+3.bbf` | 6.9.1 INDX | Huit têtes, palette de 60 nuances et correction directe ; profil `COREONE_INDX8T` |
 
-Le paquet `PrusaSlicer-Local-Filaments-macOS-arm64-v0.1.0.zip` contient le
+Le paquet `PrusaSlicer-Local-Filaments-macOS-arm64-v0.2.0.zip` contient le
 Slicer modifié **2.9.6+FilamentLocal-INDX**, compatible avec les deux protocoles.
+Malgré son suffixe historique INDX, ce Slicer prend en charge MK4 et INDX.
 Le binaire fourni cible **Apple Silicon et macOS 26.2 minimum**. Aucun binaire
 Windows, Linux ou Mac Intel n’est fourni ; les sources Slicer sont disponibles
 pour les porter et les compiler. Ces plateformes ne sont pas validées ici.
@@ -61,23 +77,24 @@ bootloader. Les vérifications de paquet figurent dans `release-manifest.json`.
 4. Laissez l’opération se terminer et vérifiez la version affichée et le démarrage
    normal avant de charger un filament.
 
-La documentation Prusa indique un appui au logo. Pendant l’essai de l’auteur,
-les tentatives avec un appui n’ont pas ouvert le flash ; un essai avec deux
-appuis rapides a ensuite été proposé avant sa confirmation globale de succès.
-Le nombre d’appuis qui a finalement fonctionné n’a pas été confirmé séparément.
-Si l’accueil revient directement, contrôlez le moment de l’appui et la clé.
-Prusa précise qu’une clé lisible pour les impressions peut échouer au flash ;
-une autre clé FAT32 est alors une piste. Cela ne justifie pas un reset usine.
+Si l’accueil revient directement, contrôlez le moment de l’appui, le BBF et
+la clé. Une autre clé FAT32 peut aider ; un reset usine n’est pas une étape
+normale de cette extension.
 
 Voir aussi la [mise à jour USB officielle incluant INDX](https://help.prusa3d.com/article/how-to-update-firmware-core-one-l-core-one-core-one-indx-mk4-s-mk3-9-s-mk3-5-s-xl_453086).
 
 ## 3. Lancer le Slicer et configurer PrusaLink
 
 1. Décompressez le ZIP dans un dossier où vous pouvez écrire.
-2. Lancez `Lancer-PrusaSlicer-MK4.command` ou `Lancer-PrusaSlicer-INDX.command`.
-   Ces lanceurs utilisent deux dossiers de réglages séparés, sans installation
-   dans Applications. Les configurations distribuées ne contiennent aucun hôte,
-   identifiant ou mot de passe.
+2. Ouvrez **PrusaSlicer Filaments MK4.app** ou **PrusaSlicer Filaments INDX.app**.
+   Les lanceurs `Lancer-PrusaSlicer-MK4.command` et `Lancer-PrusaSlicer-INDX.command`
+   restent disponibles. Ils ouvrent le même exécutable avec `settings-mk4` ou
+   `settings-indx`, distincts des réglages de PrusaSlicer officiel. Les réglages
+   distribués sont neufs, sans hôte, identifiant ni mot de passe.
+   **Gardez le dossier extrait complet** : déplacer seulement l’app casse ses
+   chemins. Ajoutez si nécessaire ce lanceur au Dock ; l’ancien raccourci
+   PrusaSlicer continue d’ouvrir l’officiel. Le ZIP de sources d’une branche
+   GitHub ne contient pas le Slicer compilé : prenez le ZIP de la release.
 3. Dans le Slicer ouvert, créez une **imprimante physique** liée au profil choisi.
    Choisissez le type d’hôte **PrusaLink**, renseignez l’adresse locale de votre
    imprimante et ses identifiants PrusaLink, puis utilisez **Tester**.
@@ -87,10 +104,23 @@ Voir aussi la [mise à jour USB officielle incluant INDX](https://help.prusa3d.c
 
 Activez PrusaLink depuis le menu réseau de l’imprimante si nécessaire.
 Prusa Connect seul ne fournit pas cette connexion locale.
-Les lanceurs du prototype bloquent l’accès au trousseau macOS ; utilisez les
-champs d’authentification de PrusaLink dans Slicer, sans stockage dans le
-trousseau via ce paquet. Ils désactivent également le polling Connect et la
-mise à jour automatique des presets dans ces réglages de départ.
+**Prusa Connect reste utilisable dans notre Slicer**, pour le compte et les
+fonctions cloud habituelles. Le paquet v0.2.0 active le polling Connect et
+utilise le trousseau macOS normal ; la connexion reste facultative pour notre
+synchronisation locale. Les identifiants PrusaLink sont ceux de l’imprimante,
+ils sont distincts du compte Connect.
+
+Notre bouton lit `GET /api/v1/filaments` directement sur le LAN avec
+l’authentification PrusaLink existante. Il n’appelle pas une API Connect et
+n’envoie pas ces couleurs au cloud. Une imprimante visible dans Connect doit
+également être configurée comme **imprimante physique PrusaLink** pour ce
+bouton. Cette version ne propose pas de synchronisation à distance via Connect.
+Voir [la distinction officielle Prusa](https://help.prusa3d.com/article/prusa-connect-and-prusalink-explained_302608).
+La mise à jour automatique des presets et les notifications de version restent
+désactivées dans les réglages de départ pour conserver la base distribuée.
+
+Avec le firmware officiel, la route ajoutée par notre firmware est absente :
+le Slicer seul ne suffit pas. Aucune solution sans flash n’est distribuée ici.
 
 Le catalogue inclus est **PrusaResearch 2.5.10**. Le rattachement du profil à
 Prusa Research est conservé pour que PrusaLink soit proposé dans la fenêtre
@@ -102,7 +132,7 @@ avec PrusaLink invite à vérifier ce type d’hôte et ce rattachement.
 1. Sur l’imprimante, ouvrez le chargement du filament de la tête voulue.
 2. Choisissez **Couleur du filament**, puis la matière habituelle, et terminez
    le chargement. La couleur est confirmée seulement après réussite.
-3. Dans Slicer, sélectionnez l’imprimante physique configurée et cliquez sur
+3. Dans l’onglet **Plateau** de notre Slicer, sélectionnez l’imprimante physique configurée et cliquez sur
    le bouton de synchronisation placé sous les lignes de filament.
 
 Sur MK4, une ligne est synchronisée. Sur INDX, les têtes physiques 1 à 8
@@ -123,10 +153,22 @@ un déchargement invalide la déclaration concernée ; une purge seule la conser
 La persistance est vérifiée par les tests du journal ; une campagne matérielle
 complète avec redémarrages et toutes les opérations reste à documenter.
 
+Sur INDX color+3, on peut aussi corriger une couleur sans recharger :
+**Filament → Couleurs des filaments → Extrudeur 1…8**, imprimante à l’arrêt.
+Les lignes affichent matière, carré et code RGB. La palette comprend 60 nuances
+sur trois pages ; le choix est enregistré immédiatement pour la tête visée.
+`Retour` annule, `Inconnu` efface la déclaration ; le noir reste distinct.
+Une tête vide/désactivée ou une opération en cours empêche l’édition. Ce menu
+ne commande ni chauffe ni mouvement et ne change pas la matière. Synchronisez
+ensuite dans Slicer. Un vrai changement de bobine utilise les opérations normales.
+
 ## Questions courantes
 
 | Symptôme | Vérification |
 |---|---|
+| Bouton entièrement absent | Ouvrir **PrusaSlicer Filaments**, pas l’officiel ; onglet Plateau, panneau de droite visible, profil FFF |
+| Bouton grisé | Sélection physique PrusaLink avec adresse locale ; une buse MK4 ou huit INDX, sans mélange virtuel |
+| Compte connecté mais imprimantes Connect absentes | Paquet v0.2.0 et reconnexion si nécessaire ; l’ancien v0.1.0 désactivait le polling et bloquait le trousseau |
 | 401 / 403 | Identifiants PrusaLink et type d’authentification |
 | 404 sur la synchronisation | Firmware du projet installé, cible prise en charge et MMU inactif sur MK4 |
 | Imprimante introuvable | Adresse locale actuelle, PrusaLink activé et accès réseau depuis le Mac |
@@ -135,6 +177,22 @@ complète avec redémarrages et toutes les opérations reste à documenter.
 | INDX refusée par le bouton | Profil `COREONE_INDX8T`, huit buses et huit lignes ; MMU désactivé |
 | Slicer ne démarre pas | Apple Silicon, macOS 26.2 minimum, archive entièrement extraite |
 
+## Mise à jour et reprise de ses profils
+
+La release **v0.1.0 est conservée comme historique** : INDX color+1 avec les
+couleurs nommées initiales, et anciens lanceurs de diagnostic. La v0.2.0
+contient INDX color+3 et les lanceurs Slicer corrigés. Le BBF MK4 et l’exécutable
+Slicer sont inchangés ; ce dernier reste 2.9.6+FilamentLocal-INDX.
+
+Une nouvelle extraction fournit des réglages neufs. Gardez votre ancien dossier,
+exportez vos profils depuis le menu Fichier de l’ancien Slicer puis importez-les
+dans la nouvelle version. Aucun profil personnel n’est repris automatiquement.
+Les bundles peuvent contenir des informations privées : vérifiez-les avant
+partage. Reconnectez-vous à Prusa Connect dans le Slicer personnalisé si nécessaire.
+
+Les mises à jour officielles ne reprennent pas automatiquement notre bouton.
+Conservez le lanceur de cette version ; une nouvelle base nécessite un portage.
+
 ## Retour à l’officiel et limites
 
 Téléchargez le BBF officiel adapté à la machine : [MK4 6.5.7](https://github.com/prusa3d/Prusa-Firmware-Buddy/releases/tag/v6.5.7)
@@ -142,6 +200,8 @@ ou [CORE One INDX 6.9.1](https://github.com/prusa3d/Prusa-Firmware-Buddy/release
 puis utilisez la procédure USB Prusa. Le journal conserve ses versions et ses
 clés de calibration ; un reset usine n’est pas requis par notre extension.
 Le retour matériel à l’officiel n’a pas été validé dans cette session.
+Pour utiliser le Slicer officiel, ouvrez son application habituelle ; elle
+n’expose pas notre bouton. La languette xBuddy retirée reste irréversible.
 
 Ce prototype vise MK4 mono-bobine et CORE One INDX 8T. Les autres modèles,
 INDX 4T, MMU et correspondances physiques/virtuelles non identiques sont hors

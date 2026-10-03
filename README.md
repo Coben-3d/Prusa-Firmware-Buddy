@@ -1,36 +1,45 @@
-# Filaments locaux Prusa — MK4 et CORE One + INDX
+# Filaments locaux Prusa — firmware + PrusaSlicer personnalisé
 
-Choisissez la couleur au chargement sur l’écran de l’imprimante, puis
-**synchronisez matière et couleur dans PrusaSlicer** par PrusaLink local.
-Pour INDX, la synchronisation porte sur les huit emplacements physiques.
-Prusa Connect n’est pas nécessaire.
+Choisissez la couleur sur l’écran de l’imprimante, puis synchronisez
+**matière et couleur dans PrusaSlicer** via **PrusaLink local**.
+Sur INDX : palette de 60 nuances et correction directe par extrudeur.
 
-**Prototype communautaire expérimental de Coben-3d.** L’auteur a confirmé le
-fonctionnement sur ses machines le 2 octobre 2026 ; le périmètre des contrôles
-et les limites sont documentés. Ce fork n’est pas une version officielle Prusa.
+**Il faut télécharger notre version complète de PrusaSlicer et installer le
+firmware correspondant à sa machine. Ce n’est pas un plugin/add-on de l’officiel.**
+Les fonctions habituelles restent disponibles, y compris Prusa Connect facultatif.
+La synchronisation des filaments utilise PrusaLink local, sans dépendance au cloud.
 
-- **[Téléchargements v0.1.0](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.1.0)**
-- **[Installer et utiliser](doc/LOCAL-FILAMENTS.md)**
-- [Tests et limites](doc/LOCAL-FILAMENTS-VALIDATION.md)
-- [Firmware MK4](https://github.com/Coben-3d/Prusa-Firmware-Buddy/tree/feature/mk4-loaded-filament-color) · [firmware CORE One INDX](https://github.com/Coben-3d/Prusa-Firmware-Buddy/tree/feature/coreone-indx-loaded-filament-colors)
-- [PrusaSlicer modifié et ses sources](https://github.com/Coben-3d/PrusaSlicer/tree/feature/indx-local-filaments)
+**Vous consultez ici : MK4.** Prototype communautaire expérimental de
+Coben-3d, sans validation officielle Prusa.
 
-| Version | Périmètre |
-|---|---|
-| MK4 6.5.7-color+4 | Une bobine, sans MMU actif |
-| CORE One INDX 6.9.1-color+1 | Huit têtes, profil HF0.4 de départ |
-| PrusaSlicer 2.9.6+FilamentLocal-INDX | MK4 et INDX ; paquet Apple Silicon, macOS 26.2 minimum |
+## Choisir sa machine
 
-Le firmware personnalisé non signé demande la rupture irréversible de la
-languette xBuddy `!`. Lire les [conditions Prusa](https://help.prusa3d.com/article/flashing-custom-firmware-core-one-l-core-one-mk4-s-mk3-9-s-mk3-5-s_814967)
-et le guide avant installation. Les profils, versions et BBF doivent correspondre
-à votre machine.
+| Machine | Firmware et fonctions | Guide | Branche sources |
+|---|---|---|---|
+| MK4, une bobine, sans MMU | 6.5.7-color+4 ; couleurs nommées au chargement | [MK4](doc/INSTALL-MK4.md) | [MK4](https://github.com/Coben-3d/Prusa-Firmware-Buddy/tree/feature/mk4-loaded-filament-color) |
+| CORE One / CORE One+ équipée d’INDX 8 têtes | 6.9.1-color+3 ; 60 nuances et correction sans recharge | [INDX](doc/INSTALL-COREONE-INDX.md) | [CORE One INDX](https://github.com/Coben-3d/Prusa-Firmware-Buddy/tree/feature/coreone-indx-loaded-filament-colors) |
+| CORE One normale V1, sans INDX | Portage en pause ; aucun BBF fourni | — | — |
 
-**English:** community prototype that stores a user-selected filament color on
-the printer and syncs loaded material and color into PrusaSlicer over local
-PrusaLink. Supports single-spool MK4 and CORE One INDX 8-tool. Downloaded macOS
-binaries require Apple Silicon and macOS 26.2+. Custom unsigned firmware needs
-the irreversible xBuddy appendix removal. Read the installation guide first.
+Deux branches firmware distinctes dans le même dépôt, un [Slicer commun](https://github.com/Coben-3d/PrusaSlicer/tree/feature/indx-local-filaments)
+compatible avec les deux. La palette INDX n’est pas encore portée sur MK4.
+
+- **[Téléchargements v0.2.0](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.2.0)** : BBF de sa machine + ZIP Slicer.
+- **[Guide complet](doc/LOCAL-FILAMENTS.md)** : installation, lanceurs/Dock,
+  PrusaLink et Connect, profils, dépannage et retour officiel.
+- [Tests et limites](doc/LOCAL-FILAMENTS-VALIDATION.md).
+- [Sources PrusaSlicer personnalisées](https://github.com/Coben-3d/PrusaSlicer/tree/feature/indx-local-filaments). Les sources GitHub ne sont pas le binaire.
+
+Binaire Slicer : **Apple Silicon et macOS 26.2 minimum**. Windows, Linux et Mac
+Intel : sources disponibles, aucun binaire ou validation fourni ici.
+Les BBF non signés nécessitent la rupture **irréversible** de la languette
+xBuddy `!` : lire [les conditions Prusa](https://help.prusa3d.com/article/flashing-custom-firmware-core-one-l-core-one-mk4-s-mk3-9-s-mk3-5-s_814967)
+et le guide. Les BBF de machines différentes ne sont pas interchangeables.
+
+**English:** community custom firmware plus a full customized PrusaSlicer
+download, not a plugin. Local material/color sync over PrusaLink. Separate MK4
+and CORE One INDX firmware branches, one shared Slicer, optional Prusa Connect.
+macOS binary requires Apple Silicon and macOS 26.2+. Standard CORE One without
+INDX is not supported yet. Read the installation guide first.
 
 ---
 
