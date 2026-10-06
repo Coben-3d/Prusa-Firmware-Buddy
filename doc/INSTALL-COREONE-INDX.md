@@ -7,10 +7,10 @@ ce n’est pas un module à installer dans l’officiel.
 
 ## Télécharger
 
-Depuis la [release v0.2.0](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.2.0), prendre :
+Depuis la [release v0.2.1](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.2.1), prendre :
 
 - **`COREONE_INDX_6.9.1-color+3.bbf`**.
-- **`PrusaSlicer-Local-Filaments-macOS-arm64-v0.2.0.zip`** : Apple Silicon,
+- **`PrusaSlicer-Local-Filaments-macOS-arm64-v0.2.1.zip`** : Apple Silicon,
   macOS 26.2 minimum, le même exécutable compatible avec MK4 et INDX.
 - `SHA256SUMS.txt` et `release-manifest.json` pour vérifier les téléchargements.
 
@@ -25,6 +25,7 @@ Firmware SHA-256 :
    suivre la procédure Prusa du guide commun. Ne pas utiliser le BBF MK4.
 3. Extraire tout le ZIP et ouvrir **PrusaSlicer Filaments INDX.app**, ou
    `Lancer-PrusaSlicer-INDX.command`. Garder le dossier extrait complet.
+   Autoriser le lanceur concerné si macOS demande l’accès au réseau local.
 4. Vérifier le profil **COREONE_INDX8T, huit buses HF0.4**, huit lignes de
    filament et MMU inactif ; les buses doivent correspondre à la machine.
    Les réglages du lanceur sont dans `settings-indx`.
@@ -76,6 +77,9 @@ v0.1.0 contient **color+1**, menu nommé initial. **color+2** ajoute la palette 
 **color+3**, fourni dans v0.2.0, ajoute la correction directe et conserve la
 palette. Le binaire Slicer reste identique ; les lanceurs v0.2.0 réactivent
 Prusa Connect et le trousseau et portent des noms explicites.
+La v0.2.1 remplace les scripts `.app` par des lanceurs natifs pour corriger
+l’autorisation réseau macOS. Le BBF color+3 reste identique ; aucun nouveau
+flash n’est requis s’il est déjà installé.
 
 - [Branche firmware INDX](https://github.com/Coben-3d/Prusa-Firmware-Buddy/tree/feature/coreone-indx-loaded-filament-colors).
 - [Détails techniques INDX](https://github.com/Coben-3d/Prusa-Firmware-Buddy/blob/feature/coreone-indx-loaded-filament-colors/doc/COREONE-INDX-local-filaments.md).

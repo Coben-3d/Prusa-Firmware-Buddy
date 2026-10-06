@@ -23,7 +23,7 @@ Coben-3d, sans validation officielle Prusa.
 Deux branches firmware distinctes dans le même dépôt, un [Slicer commun](https://github.com/Coben-3d/PrusaSlicer/tree/feature/indx-local-filaments)
 compatible avec les deux. La palette INDX n’est pas encore portée sur MK4.
 
-- **[Téléchargements v0.2.0](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.2.0)** : BBF de sa machine + ZIP Slicer.
+- **[Téléchargements v0.2.1](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.2.1)** : BBF de sa machine + ZIP Slicer.
 - **[Guide complet](doc/LOCAL-FILAMENTS.md)** : installation, lanceurs/Dock,
   PrusaLink et Connect, profils, dépannage et retour officiel.
 - [Tests et limites](doc/LOCAL-FILAMENTS-VALIDATION.md).

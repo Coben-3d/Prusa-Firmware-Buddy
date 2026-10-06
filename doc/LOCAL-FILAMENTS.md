@@ -28,14 +28,14 @@ sur MK4. Les modèles MK4S, INDX 4T et CORE One L ne sont pas validés ici.
 
 ## Télécharger et choisir sa version
 
-Les fichiers et leurs empreintes SHA-256 sont dans la [publication v0.2.0](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.2.0).
+Les fichiers et leurs empreintes SHA-256 sont dans la [publication v0.2.1](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.2.1).
 
 | Machine | Firmware du projet | Base officielle | Configuration prévue |
 |---|---|---|---|
 | MK4 | `MK4_6.5.7-color+4.bbf` | 6.5.7 | Une bobine, sans MMU actif |
 | CORE One + INDX | `COREONE_INDX_6.9.1-color+3.bbf` | 6.9.1 INDX | Huit têtes, palette de 60 nuances et correction directe ; profil `COREONE_INDX8T` |
 
-Le paquet `PrusaSlicer-Local-Filaments-macOS-arm64-v0.2.0.zip` contient le
+Le paquet `PrusaSlicer-Local-Filaments-macOS-arm64-v0.2.1.zip` contient le
 Slicer modifié **2.9.6+FilamentLocal-INDX**, compatible avec les deux protocoles.
 Malgré son suffixe historique INDX, ce Slicer prend en charge MK4 et INDX.
 Le binaire fourni cible **Apple Silicon et macOS 26.2 minimum**. Aucun binaire
@@ -162,6 +162,38 @@ Une tête vide/désactivée ou une opération en cours empêche l’édition. Ce
 ne commande ni chauffe ni mouvement et ne change pas la matière. Synchronisez
 ensuite dans Slicer. Un vrai changement de bobine utilise les opérations normales.
 
+## Réseau local sur macOS
+
+Un message « PrusaLink inaccessible ou requête échouée » peut aussi venir
+de l’autorisation réseau de l’application, même avec une IP correcte. Ouvrez
+d’abord la page PrusaLink dans le navigateur du même Mac, puis essayez
+**Tester** dans l’imprimante physique pour distinguer l’accès réseau de la
+route de synchronisation et des identifiants.
+
+Autorisez **PrusaSlicer Filaments MK4** ou **PrusaSlicer Filaments INDX** si
+macOS le demande. Retrouvez ce réglage dans **Réglages Système →
+Confidentialité et sécurité → Réseau local** : [procédure Apple](https://support.apple.com/fr-fr/guide/mac-help/mchla4f49138/mac).
+En cas d’état incohérent, désactivez puis réactivez uniquement l’application
+concernée, puis réessayez Tester.
+
+Le 6 octobre 2026, les `.app` basées sur un script ont présenté une boucle
+d’autorisation sur le Mac de l’auteur. Un lanceur natif a rétabli la
+synchronisation INDX, confirmée par l’auteur. **Utilisez v0.2.1**, avec un
+exécutable principal natif, un UUID distinct par variante et une description
+d’accès local. Cela corrige le paquet ; les firmwares et le moteur Slicer
+restent ceux déjà distribués. Aucun flash supplémentaire n’est requis.
+
+Enregistrez et quittez l’ancienne session avant d’ouvrir la nouvelle.
+Le lanceur reste actif pendant la session et revient sur Slicer lors d’une
+nouvelle ouverture ; quittez Slicer par son menu. Gardez tout le dossier extrait.
+Les `.command` ouverts depuis Terminal restent disponibles. Apple documente
+l’autorisation automatique du réseau local pour les outils lancés depuis
+Terminal et leurs enfants, ainsi que les exigences de signature et d’UUID :
+[TN3179](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy).
+Les lanceurs sont signés ad hoc ; le projet ne possède pas de certificat
+Developer ID ni de notarisation. Le correctif confirmé sur ce Mac ne constitue
+pas une validation sur toutes les versions et configurations macOS.
+
 ## Questions courantes
 
 | Symptôme | Vérification |
@@ -172,6 +204,7 @@ ensuite dans Slicer. Un vrai changement de bobine utilise les opérations normal
 | 401 / 403 | Identifiants PrusaLink et type d’authentification |
 | 404 sur la synchronisation | Firmware du projet installé, cible prise en charge et MMU inactif sur MK4 |
 | Imprimante introuvable | Adresse locale actuelle, PrusaLink activé et accès réseau depuis le Mac |
+| Page PrusaLink accessible, Slicer en échec réseau | Paquet v0.2.1, autorisation Réseau local du lanceur, puis Tester ; voir la section macOS |
 | Couleur inconnue | Déclarer la couleur pendant un chargement normal terminé |
 | Matière inchangée dans Slicer | Profil compatible installé ; confirmer un éventuel dialogue de choix |
 | INDX refusée par le bouton | Profil `COREONE_INDX8T`, huit buses et huit lignes ; MMU désactivé |
@@ -183,6 +216,8 @@ La release **v0.1.0 est conservée comme historique** : INDX color+1 avec les
 couleurs nommées initiales, et anciens lanceurs de diagnostic. La v0.2.0
 contient INDX color+3 et les lanceurs Slicer corrigés. Le BBF MK4 et l’exécutable
 Slicer sont inchangés ; ce dernier reste 2.9.6+FilamentLocal-INDX.
+La v0.2.1 conserve les mêmes BBF et le même moteur Slicer ; elle ajoute les
+lanceurs macOS natifs et le dépannage de leur autorisation réseau local.
 
 Une nouvelle extraction fournit des réglages neufs. Gardez votre ancien dossier,
 exportez vos profils depuis le menu Fichier de l’ancien Slicer puis importez-les
