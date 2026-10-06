@@ -6,10 +6,10 @@ Ce n’est pas un module à ajouter au Slicer officiel.
 
 ## Télécharger
 
-Depuis la [release v0.2.0](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.2.0), prendre :
+Depuis la [release v0.2.1](https://github.com/Coben-3d/Prusa-Firmware-Buddy/releases/tag/local-filaments-v0.2.1), prendre :
 
 - **`MK4_6.5.7-color+4.bbf`**.
-- **`PrusaSlicer-Local-Filaments-macOS-arm64-v0.2.0.zip`** : Apple Silicon,
+- **`PrusaSlicer-Local-Filaments-macOS-arm64-v0.2.1.zip`** : Apple Silicon,
   macOS 26.2 minimum, le même exécutable compatible avec MK4 et INDX.
 - `SHA256SUMS.txt` et `release-manifest.json` pour vérifier les téléchargements.
 
@@ -24,6 +24,7 @@ Firmware SHA-256 :
    la procédure Prusa du guide commun. Ne pas utiliser le fichier INDX.
 3. Extraire tout le ZIP et ouvrir **PrusaSlicer Filaments MK4.app**, ou
    `Lancer-PrusaSlicer-MK4.command`. Garder le dossier extrait complet.
+   Autoriser le lanceur concerné si macOS demande l’accès au réseau local.
 4. Vérifier le profil **MK4 Input Shaper, une buse 0,4 mm** et ses réglages avant
    impression. Les réglages du lanceur sont dans `settings-mk4`.
 5. Créer et sélectionner une **imprimante physique PrusaLink**, avec adresse
@@ -37,7 +38,8 @@ La MK4 utilise actuellement une liste de couleurs nommées : noir, blanc, gris,
 rouge, orange, jaune, vert, bleu, violet, marron, rose, plus l’état inconnu.
 **La palette visuelle de 60 nuances et le menu de correction sans recharge
 INDX ne sont pas encore portés sur MK4.** Le BBF MK4 n’a pas changé entre
-v0.1.0 et v0.2.0 ; le nouveau paquet Slicer corrige les lanceurs et Prusa Connect.
+v0.1.0, v0.2.0 et v0.2.1. La v0.2.1 corrige le lanceur macOS pour le réseau
+local ; aucun nouveau flash n’est requis si ce BBF est déjà installé.
 
 Le compte Prusa Connect reste utilisable dans cette version. Il ne remplace
 pas la connexion locale PrusaLink. Si le bouton est absent, vérifier que le

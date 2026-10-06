@@ -1,4 +1,4 @@
-# Validation du projet — v0.1.0 et v0.2.0
+# Validation du projet — v0.1.0 à v0.2.1
 
 ## Essais matériels déclarés par l’auteur
 
@@ -83,3 +83,28 @@ Aucun réglage personnel ni identifiant n’est publié.
 Les essais physiques détaillés sur les huit têtes, redémarrages, longues
 impressions et le retour officiel restent à documenter. Le portage de la
 palette MK4 et la version CORE One normale V1 sont en pause.
+
+## Correctif du lanceur macOS — v0.2.1
+
+Le 6 octobre 2026, l’auteur a rencontré une erreur de synchronisation malgré
+une adresse locale correcte. Des GET sans authentification ont confirmé la
+réponse HTTP locale de la machine ; les journaux système macOS montraient une
+boucle d’autorisation et de réinitialisation du cache d’identité du Slicer.
+Après remplacement du script `.app` par un exécutable principal natif qui
+reste actif et lance le même Slicer avec ses réglages, l’auteur a confirmé
+« La synchronisation fonctionne » sur sa CORE One INDX.
+
+Le binaire Slicer, ses réglages et les deux BBF sont conservés. Les lanceurs
+natifs déclarent `NSLocalNetworkUsageDescription` et ont un UUID propre à
+chaque variante ; leurs bundles sont signés ad hoc. Deux essais via
+LaunchServices avec des exécutables factices, dans des chemins contenant
+des espaces, ont vérifié le parent natif, les arguments de réglages, l’option
+single-instance et l’absence du blocage de trousseau. Les contrôles du paquet
+v0.2.1 sont consignés dans `release-manifest.json`.
+
+Cette confirmation est un essai utilisateur sur un Mac sous macOS 26.6.2,
+sans capture de requête authentifiée ni lecture d’identifiants. Elle ne couvre
+pas toutes les versions macOS, les mises à jour de signature ni une nouvelle
+campagne physique MK4. Apple demande une identité de signature Apple pour un
+suivi fiable de l’identité ; le projet ne dispose que de signatures ad hoc :
+[TN3179](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy).
